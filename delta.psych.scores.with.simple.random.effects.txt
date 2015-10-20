@@ -1,0 +1,227 @@
+*** Reading /Volumes/data/sanDiego/rsfcGraphAnalysis/data/Group.data.CDRSR.diff.withAandC/subjectOrder.mddAndCtrl.L_BLA.3mm.csv 
+####################################################################################################
+### Analysis of CDRSR 
+### Table of n
+     timepoint
+Grp   Baseline 3 months follow-up Sum
+  MDD       23                 23  46
+  HCL       10                 10  20
+  Sum       33                 33  66
+  Grp          timepoint  N    CDRSR median IQR     mad        sd min max nacount        se       ci
+1 MDD           Baseline 23 68.00000   68.0  12 10.3782 10.198039  44  84       0 2.1264381 4.409963
+2 MDD 3 months follow-up 23 62.30435   61.0  13  8.8956 10.734121  40  84       0 2.2382189 4.641782
+3 HCL           Baseline 10 32.50000   33.0   3  2.2239  3.027650  30  40       0 0.9574271 2.165851
+4 HCL 3 months follow-up 10 34.60000   31.5   3  2.2239  7.748835  30  53       0 2.4503968 5.543183
+
+
+MDD ONLY T TEST
+
+	Paired t-test
+
+data:  ss[ss$timepoint == "Baseline", y.axis] and ss[ss$timepoint == "3 months follow-up", y.axis]
+t = 3.1667, df = 22, p-value = 0.004469
+alternative hypothesis: true difference in means is not equal to 0
+95 percent confidence interval:
+ 1.965608 9.425696
+sample estimates:
+mean of the differences 
+               5.695652 
+
+
+
+###LME:
+Linear mixed-effects model fit by REML
+  Data: in.data 
+  Log-restricted-likelihood: -225.5145
+  Fixed: model.formula 
+                       (Intercept)                             GrpHCL        timepoint3 months follow-up GrpHCL:timepoint3 months follow-up 
+                         68.000000                         -35.500000                          -5.695652                           7.795652 
+
+Random effects:
+ Formula: ~1 | subject
+        (Intercept) Residual
+StdDev:     7.19991  5.99969
+
+Number of Observations: 66
+Number of Groups: 33 
+
+
+###ANOVA:
+              numDF denDF   F-value p-value
+(Intercept)       1    31 1459.4865  <.0001
+Grp               1    31   99.6697  <.0001
+timepoint         1    31    5.0931  0.0312
+Grp:timepoint     1    31    5.8834  0.0213
+
+
+###Effects:
+
+ Grp effect
+Grp
+     MDD      HCL 
+65.15217 33.55000 
+
+ timepoint effect
+timepoint
+          Baseline 3 months follow-up 
+          57.24242           53.90909 
+ model: CDRSR ~ Grp * timepoint
+
+ Grp*timepoint effect
+     timepoint
+Grp   Baseline 3 months follow-up
+  MDD     68.0           62.30435
+  HCL     32.5           34.60000
+*** Reading /Volumes/data/sanDiego/rsfcGraphAnalysis/data/Group.data.CGAS.diff.withAandC/subjectOrder.mddAndCtrl.L_BLA.3mm.csv 
+####################################################################################################
+### Analysis of CGAS 
+### Table of n
+     timepoint
+Grp   Baseline 3 months follow-up Sum
+  MDD       16                 16  32
+  HCL        9                  9  18
+  Sum       25                 25  50
+  Grp          timepoint  N     CGAS median   IQR     mad        sd min max nacount       se       ci
+1 MDD           Baseline 16 65.68750     70 22.75  8.1543 13.194538  42  90       0 3.298635 7.030873
+2 MDD 3 months follow-up 16 67.50000     69 17.50 14.8260 12.532624  50  85       0 3.133156 6.678164
+3 HCL           Baseline  9 88.77778     90 10.00  7.4130  7.462871  75  97       0 2.487624 5.736471
+4 HCL 3 months follow-up  9 90.77778     90  1.00  1.4826  4.493823  85 100       0 1.497941 3.454258
+
+
+MDD ONLY T TEST
+
+	Paired t-test
+
+data:  ss[ss$timepoint == "Baseline", y.axis] and ss[ss$timepoint == "3 months follow-up", y.axis]
+t = -0.5997, df = 15, p-value = 0.5577
+alternative hypothesis: true difference in means is not equal to 0
+95 percent confidence interval:
+ -8.254683  4.629683
+sample estimates:
+mean of the differences 
+                -1.8125 
+
+
+
+###LME:
+Linear mixed-effects model fit by REML
+  Data: in.data 
+  Log-restricted-likelihood: -177.2578
+  Fixed: model.formula 
+                       (Intercept)                             GrpHCL        timepoint3 months follow-up GrpHCL:timepoint3 months follow-up 
+                          65.68750                           23.09028                            1.81250                            0.18750 
+
+Random effects:
+ Formula: ~1 | subject
+        (Intercept) Residual
+StdDev:    7.790862 7.777406
+
+Number of Observations: 50
+Number of Groups: 25 
+
+
+###ANOVA:
+              numDF denDF   F-value p-value
+(Intercept)       1    23 1543.8497  <.0001
+Grp               1    23   34.0438  <.0001
+timepoint         1    23    0.7304  0.4016
+Grp:timepoint     1    23    0.0017  0.9677
+
+
+###Effects:
+
+ Grp effect
+Grp
+     MDD      HCL 
+66.59375 89.77778 
+
+ timepoint effect
+timepoint
+          Baseline 3 months follow-up 
+             74.00              75.88 
+ model: CGAS ~ Grp * timepoint
+
+ Grp*timepoint effect
+     timepoint
+Grp   Baseline 3 months follow-up
+  MDD 65.68750           67.50000
+  HCL 88.77778           90.77778
+
+*c** Summary of CGAS.diff
+  Grp  N CGAS.diff median  IQR    mad        sd min max nacount       se       ci
+1 MDD 16    1.8125    0.5 12.5 9.6369 12.089768 -15  32       0 3.022442 6.442183
+2 HCL  9    2.0000   -2.0  9.0 4.4478  8.587782  -5  20       0 2.862594 6.601154
+*** Reading /Volumes/data/sanDiego/rsfcGraphAnalysis/data/Group.data.RADS.Total.Tscore.diff.withAandC/subjectOrder.mddAndCtrl.L_BLA.3mm.csv 
+####################################################################################################
+### Analysis of RADS 
+### Table of n
+     timepoint
+Grp   Baseline 3 months follow-up Sum
+  MDD       16                 16  32
+  HCL       11                 11  22
+  Sum       27                 27  54
+  Grp          timepoint  N     RADS median  IQR    mad       sd min max nacount        se       ci
+1 MDD           Baseline 16 63.75000     63 8.75 6.6717 7.861298  46  76       0 1.9653244 4.188990
+2 MDD 3 months follow-up 16 60.62500     62 9.25 5.1891 6.216912  51  72       0 1.5542281 3.312759
+3 HCL           Baseline 11 39.90909     38 6.50 4.4478 4.678772  35  48       0 1.4107029 3.143242
+4 HCL 3 months follow-up 11 37.54545     37 4.00 2.9652 2.910795  35  43       0 0.8776377 1.955499
+
+
+MDD ONLY T TEST
+
+	Paired t-test
+
+data:  ss[ss$timepoint == "Baseline", y.axis] and ss[ss$timepoint == "3 months follow-up", y.axis]
+t = 1.2741, df = 15, p-value = 0.222
+alternative hypothesis: true difference in means is not equal to 0
+95 percent confidence interval:
+ -2.102758  8.352758
+sample estimates:
+mean of the differences 
+                  3.125 
+
+
+
+###LME:
+Linear mixed-effects model fit by REML
+  Data: in.data 
+  Log-restricted-likelihood: -165.8315
+  Fixed: model.formula 
+                       (Intercept)                             GrpHCL        timepoint3 months follow-up GrpHCL:timepoint3 months follow-up 
+                        63.7500000                        -23.8409091                         -3.1250000                          0.7613636 
+
+Random effects:
+ Formula: ~1 | subject
+        (Intercept) Residual
+StdDev:    1.166972 5.903042
+
+Number of Observations: 54
+Number of Groups: 27 
+
+
+###ANOVA:
+              numDF denDF  F-value p-value
+(Intercept)       1    25 3981.240  <.0001
+Grp               1    25  190.989  <.0001
+timepoint         1    25    3.070  0.0920
+Grp:timepoint     1    25    0.054  0.8178
+
+
+###Effects:
+
+ Grp effect
+Grp
+     MDD      HCL 
+62.18750 38.72727 
+
+ timepoint effect
+timepoint
+          Baseline 3 months follow-up 
+          54.03704           51.22222 
+ model: RADS ~ Grp * timepoint
+
+ Grp*timepoint effect
+     timepoint
+Grp   Baseline 3 months follow-up
+  MDD 63.75000           60.62500
+  HCL 39.90909           37.54545

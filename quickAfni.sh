@@ -1,0 +1,99 @@
+#!/bin/bash
+
+afni -noplugins \
+-com "CLOSE_WINDOW axialimage" \
+-com "CLOSE_WINDOW sagittalimage" \
+-com "CLOSE_WINDOW coronalimage" \
+-com "CHDIR /data/sanDiego/rsfcGraphAnalysis/data/rsfc_mni_space_review_html" \
+-com "SET_XHAIRS OFF " \
+-com "SET_VIEW tlrc" \
+-com "SET_ANATOMY XYZ_Bt2pdxy5blBNjQFXuLizUA" \
+-com "SET_PBAR_ALL -99 1.0 Spectrum:red_to_blue" \
+-com "SET_FUNC_RANGE 0" \
+-com "SEE_OVERLAY +" \
+-com "SET_FUNCTION 0 0" \
+-com "SET_DICOM_XYZ 0.5 9.5 -22.5" \
+-com "SET_THRESHNEW 0 " \
+-com "OPEN_WINDOW axialimage opacity=7" \
+-com "SAVE_PNG axialimage rendered_image_001_001" \
+-com "SET_VIEW tlrc" \
+-com "SET_ANATOMY XYZ_Bt2pdxy5blBNjQFXuLizUA" \
+-com "SET_PBAR_ALL -99 1.0 Spectrum:red_to_blue" \
+-com "SET_FUNC_RANGE 0" \
+-com "SEE_OVERLAY +" \
+-com "SET_FUNCTION 0 0" \
+-com "SET_DICOM_XYZ 0.5 9.5 2.5" \
+-com "SET_THRESHNEW 0 " \
+-com "OPEN_WINDOW axialimage opacity=7" \
+-com "SAVE_PNG axialimage rendered_image_001_002" \
+-com "SET_VIEW tlrc" \
+-com "SET_ANATOMY XYZ_Bt2pdxy5blBNjQFXuLizUA" \
+-com "SET_PBAR_ALL -99 1.0 Spectrum:red_to_blue" \
+-com "SET_FUNC_RANGE 0" \
+-com "SEE_OVERLAY +" \
+-com "SET_FUNCTION 0 0" \
+-com "SET_DICOM_XYZ 0.5 9.5 24.5" \
+-com "SET_THRESHNEW 0 " \
+-com "OPEN_WINDOW axialimage opacity=7" \
+-com "SAVE_PNG axialimage rendered_image_001_003" \
+-com "SET_VIEW tlrc" \
+-com "SET_ANATOMY XYZ_Bt2pdxy5blBNjQFXuLizUA" \
+-com "SET_PBAR_ALL -99 1.0 Spectrum:red_to_blue" \
+-com "SET_FUNC_RANGE 0" \
+-com "SEE_OVERLAY +" \
+-com "SET_FUNCTION 0 0" \
+-com "SET_DICOM_XYZ -24.5 9.5 2.5" \
+-com "SET_THRESHNEW 0 " \
+-com "OPEN_WINDOW sagittalimage opacity=7" \
+-com "SAVE_PNG sagittalimage rendered_image_001_004" \
+-com "SET_VIEW tlrc" \
+-com "SET_ANATOMY XYZ_Bt2pdxy5blBNjQFXuLizUA" \
+-com "SET_PBAR_ALL -99 1.0 Spectrum:red_to_blue" \
+-com "SET_FUNC_RANGE 0" \
+-com "SEE_OVERLAY +" \
+-com "SET_FUNCTION 0 0" \
+-com "SET_DICOM_XYZ 0.5 9.5 2.5" \
+-com "SET_THRESHNEW 0 " \
+-com "OPEN_WINDOW sagittalimage opacity=7" \
+-com "SAVE_PNG sagittalimage rendered_image_001_005" \
+-com "SET_VIEW tlrc" \
+-com "SET_ANATOMY XYZ_Bt2pdxy5blBNjQFXuLizUA" \
+-com "SET_PBAR_ALL -99 1.0 Spectrum:red_to_blue" \
+-com "SET_FUNC_RANGE 0" \
+-com "SEE_OVERLAY +" \
+-com "SET_FUNCTION 0 0" \
+-com "SET_DICOM_XYZ 24.5 9.5 2.5" \
+-com "SET_THRESHNEW 0 " \
+-com "OPEN_WINDOW sagittalimage opacity=7" \
+-com "SAVE_PNG sagittalimage rendered_image_001_006" \
+-com "SET_VIEW tlrc" \
+-com "SET_ANATOMY XYZ_Bt2pdxy5blBNjQFXuLizUA" \
+-com "SET_PBAR_ALL -99 1.0 Spectrum:red_to_blue" \
+-com "SET_FUNC_RANGE 0" \
+-com "SEE_OVERLAY +" \
+-com "SET_FUNCTION 0 0" \
+-com "SET_DICOM_XYZ 0.5 -15.5 2.5" \
+-com "SET_THRESHNEW 0 " \
+-com "OPEN_WINDOW coronalimage opacity=7" \
+-com "SAVE_PNG coronalimage rendered_image_001_007" \
+-com "SET_VIEW tlrc" \
+-com "SET_ANATOMY XYZ_Bt2pdxy5blBNjQFXuLizUA" \
+-com "SET_PBAR_ALL -99 1.0 Spectrum:red_to_blue" \
+-com "SET_FUNC_RANGE 0" \
+-com "SEE_OVERLAY +" \
+-com "SET_FUNCTION 0 0" \
+-com "SET_DICOM_XYZ 0.5 9.5 2.5" \
+-com "SET_THRESHNEW 0 " \
+-com "OPEN_WINDOW coronalimage opacity=7" \
+-com "SAVE_PNG coronalimage rendered_image_001_008" \
+-com "SET_VIEW tlrc" \
+-com "SET_ANATOMY XYZ_Bt2pdxy5blBNjQFXuLizUA" \
+-com "SET_PBAR_ALL -99 1.0 Spectrum:red_to_blue" \
+-com "SET_FUNC_RANGE 0" \
+-com "SEE_OVERLAY +" \
+-com "SET_FUNCTION 0 0" \
+-com "SET_DICOM_XYZ 0.5 34.5 2.5" \
+-com "SET_THRESHNEW 0 " \
+-com "OPEN_WINDOW coronalimage opacity=7" \
+-com "SAVE_PNG coronalimage rendered_image_001_009" \
+-com QUIT /data/sanDiego/rsfcGraphAnalysis/data/107_A/rsfcPreprocessed/107_A.anat_struc_brain.std.2.MNI.nonlinear+tlrc.HEAD /data/sanDiego/rsfcGraphAnalysis/data/107_A/rsfcPreprocessed/107_A.pm.cleanEPI.MNI+tlrc.HEAD
