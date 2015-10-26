@@ -13,3 +13,5 @@ Thumbs.db
 .Rhistory
 .Rapp.history
 .RData
+.3dLME.dbg.AFNI.args
+.rPkgsInstall.dbg.AFNI.args
