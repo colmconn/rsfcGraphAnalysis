@@ -32,11 +32,14 @@ scriptsDir=${ROOT}/scripts
 # parallel --wd $( pwd ) -j16 < $taskFile
 
 
-
-subjects="320_A 323_A 149_A 150_A 161_A 300_A 309_A 316_A 338_A 344_A 345_A 349_A 361_A"
-seedList="../data/config/juelich_amygdala_seeds_weights.txt "
+taskFile=taskFile-mask-z-score.txt
+#subjects="320_A 323_A 149_A 150_A 161_A 300_A 309_A 316_A 338_A 344_A 345_A 349_A 361_A"
+## seedList="../data/config/juelich_amygdala_seeds_weights.txt "
+seedList="../data/config/juelich_whole_amygdala_seeds.txt"
 seeds=$( eval echo $( cat $seedList | sed "/#/d" ) )
 groups="mddAndCtrl"
+
+cat /dev/null > $taskFile
 
 for seed in $seeds ; do
 
@@ -47,10 +50,13 @@ for seed in $seeds ; do
 	seedName=${seedName%%+*}
     fi
 
+    subjects=$( cat $GROUP_DATA/subjectOrder.mddAndCtrl.${seedName}.csv | sed 1d )
     for ss in $subjects ; do
 	ddir=/data/sanDiego/rsfcGraphAnalysis/data/$ss/rsfc/$seedName
 	zscoreFile=$ddir/${seedName}.z-score+tlrc.HEAD
-	( cd $ddir ; 3dcalc -datum float -a $GROUP_RESULTS/mask.grey.$groups.union.masked+tlrc.HEAD -b ${zscoreFile} -expr "a*b" -prefix ${zscoreFile%%+*}.masked )
+	## ( cd $ddir ; 3dcalc -datum float -a $GROUP_RESULTS/mask.grey.$groups.union.masked+tlrc.HEAD -b ${zscoreFile} -expr "a*b" -prefix ${zscoreFile%%+*}.masked )
+	echo "3dcalc -datum float -a $GROUP_RESULTS/mask.grey.$groups.union.masked+tlrc.HEAD -b ${zscoreFile} -expr \"a*b\" -prefix ${zscoreFile%%+*}.masked" >> $taskFile
     done
 done
 		 
+parallel --wd $( pwd ) -j50 < $taskFile
