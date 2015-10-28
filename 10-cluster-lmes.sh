@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x 
+## set -x 
 
 # if ctrl-c is typed exit immediatly
 trap exit SIGHUP SIGINT SIGTERM
@@ -10,8 +10,8 @@ programName=`basename $0`
 GETOPT=$( which getopt )
 ROOT=${MDD_ROOT:-/data/sanDiego/rsfcGraphAnalysis}
 DATA=$ROOT/data
-GROUP_DATA=$DATA/Group.data.withAandC
-GROUP_RESULTS=$DATA/Group.results.withAandC
+GROUP_DATA=$DATA/Group.data
+GROUP_RESULTS=$DATA/Group.results
 MDD_STANDARD=$ROOT/standard
 MDD_TISSUEPRIORS=$ROOT/tissuepriors
 scriptsDir=${ROOT}/scripts
@@ -24,9 +24,22 @@ groups="mddAndCtrl"
 function makeBucketFilePrefix {
     local group=$1
     local seedName=$2
+    local analysis="$3"
 
     ## restingstate",        groups, seedName, "lme.bucket",       sep=".")
-    prefix="restingstate.${group}.${seedName}.lme.bucket"
+    if [[ ! -z "$analysis" ]] ;then 
+	prefix="restingstate.${group}.${analysis}.${seedName}.lme.bucket"
+    else 
+	prefix="restingstate.${group}.${seedName}.lme.bucket"
+    fi
+    echo $prefix
+}
+
+function makeClustSimFilePrefix {
+    local group=$1
+    local fwhm="$2"
+
+    prefix="CStemp.fwhm${usedFwhm}.${group}"
 
     echo $prefix
 }
@@ -66,7 +79,8 @@ function extractTStatpars {
 
 function fixStatLabel {
 
-    echo "$( echo $1 | sed "s/:/X/g" )"
+    echo "$( echo $1 | awk 'BEGIN  { OFS="."}; {print $1,$2}' | sed 's/:/X/g' )"
+    # echo "$( echo $1 | sed "s/:/X/g" )"
 }
 
 function extractNVoxels {
@@ -76,6 +90,7 @@ function extractNVoxels {
     ## voxelwise p-value
     local vPValue=$3
     local clustsimPrefix=$4
+    local side="$5"
 
     #0.100  0.090  0.080  0.070  0.060  0.050  0.040  0.030  0.020  0.010
     if [ $cPValue == 0.100 ] ; then
@@ -100,12 +115,16 @@ function extractNVoxels {
 	pvalueColumn=11
     fi
 
-    nVoxels=$( cat $clustsimPrefix.NN$nn.1D | sed '/^#/d' | grep "^ $vPValue" | awk "{print \$$pvalueColumn}" )
+    if [[ "X$pvalueColumn" == "X" ]] ; then
+	nVoxels="NA"
+    else
+	nVoxels=$( cat $clustsimPrefix.NN${nn}_${side}.1D | sed '/^#/d' | grep "^ $vPValue" | awk "{print \$$pvalueColumn}" )
+    fi
 
     echo $nVoxels
 }
 
-GETOPT_OPTIONS=$( $GETOPT  -o "l:in:" --longoptions "seedlist:,useInherentSmoothness,nn:" -n ${programName} -- "$@" )
+GETOPT_OPTIONS=$( $GETOPT  -o "l:is:n:op:c:" --longoptions "seedlist:,useInherentSmoothness,svc:,nn:,overwrite,pvalue:,cpvalue:" -n ${programName} -- "$@" )
 exitStatus=$?
 if [ $exitStatus != 0 ] ; then 
     echo "Error with getopt. Terminating..." >&2 
@@ -113,31 +132,40 @@ if [ $exitStatus != 0 ] ; then
 fi
 
 useInherentSmoothness=0
+overwrite=0
+
 # Note the quotes around `$GETOPT_OPTIONS': they are essential!
 eval set -- "$GETOPT_OPTIONS"
 while true ; do 
     case "$1" in
 	-l|--seedlist)
 	    seedList=$2; shift 2 ;;
+	-p|--pvalue)
+	    pValue=$2;
+	    shift 2 ;;
+	-c|--cpvalue)
+	    cPvalue=$2;
+	    shift 2 ;;
 	-n|--nn)
 	    NN=$2; 
 	    shift 2 ;;
 	-i|--useInherentSmoothness ) 
 	    useInherentSmoothness=1; 
+	    shift ;;		
+	-o|--overwrite ) 
+	    overwrite=1; 
 	    shift ;;
 	--) 
 	    shift ; break ;;
-
+	
 	*) 
 	    echo "${programName}: ${1}: invalid option" >&2
 	    exit 2 ;;
     esac
 done
-echo $seedList
 
-cat $seedList
 
-if [[ ! -f $seedList ]] || [[ "x$seedList" == "x" ]] ; then
+if [ ! -f $seedList ] || [ "x$seedList" == "x" ] ; then
     echo "*** ERROR: The seed list file does not exit or was not provided. Exiting"
     exit
 else 
@@ -168,6 +196,28 @@ case $NN in
 	exit 2 ;;
 esac
 
+if [[ $cleaned -eq 1 ]] ; then
+    echo "*** Will use cleaned versions of the data files"
+    cleanedSuffix=".cleaned"
+
+fi
+
+if [[ "x$pValue" == "x" ]] ; then
+    ## voxelwise pvalue
+    pValue=0.05
+    echo "*** Set voxelwise pvalue to $pValue (default)"
+else
+    echo "*** Set voxelwise pvalue to $pValue"
+fi
+
+if [[ "x$cPvalue" == "x" ]] ; then
+    # clusterwise pvalue
+    cPvalue=0.050
+    echo "*** Set whole brain pvalue to $cPvalue (default)"	    
+else
+    useFirstColumn=1
+    echo "*** Set whole brain pvalue to $cPvalue"    
+fi
 
 #export OMP_NUM_THREADS=8
 
@@ -185,8 +235,9 @@ echo "*** Correcting for $usedFwhm mm smoothness"
 
 cd $GROUP_RESULTS
 
+analysis="group.and.gender" 
 csvFile=parameters.fwhm${usedFwhm}.$groups.csv
-echo "seed,fwhm,f/tLabel,f/tValueBrikId,f/tThreshold,rmm,nVoxels,df,pValue,cPvalue,nClusters,mask,bucketFile" > $csvFile
+echo "analysis,seed,fwhm,f/zLabel,f/zValueBrikId,f/zThreshold,rmm,nVoxels,df,pValue,cPvalue,nClusters,bucketFile" > $csvFile
 
 for seed in $seeds ; do
 	
@@ -196,78 +247,73 @@ for seed in $seeds ; do
     else 
 	seedName=${seedName%%+*}
     fi
-
+    
     echo "####################################################################################################"
     echo "### Seed is: $seedName"
-
+    
     bucketFilename=$GROUP_DATA/$task.bucket.$groups.${seedName}.masked+tlrc.HEAD
     ctrlOnlyBucketFilename=$GROUP_DATA/$task.bucket.ctrlOnly.${seedName}.masked+tlrc.HEAD
     mddOnlyBucketFilename=$GROUP_DATA/$task.bucket.mddOnly.${seedName}.masked+tlrc.HEAD
-
-    if [ ! -f $bucketFilename ] ; then
+    
+    if [[ ! -f $bucketFilename ]] ; then
 	pwd
 	echo "*** ERROR cannot find $bucketFilename. Exiting"
 	exit
     fi
     
-    ## delete all the masked versions of the latest LME bucket file to
-    ## prevent the pickLatestBucketFile function from finding them instead
-    ## of the original non-masked version
-    ## rm -f $task.lme.bucket.$groups.$contrast.REML.*+tlrc.HEAD
-
-    latestLmeBucketPrefix=$( makeBucketFilePrefix $groups $seedName )
+    latestLmeBucketPrefix=$( makeBucketFilePrefix $groups $seedName  $analysis )
     latestLmeBucketFile=$( pickLatestBucketFile  $latestLmeBucketPrefix ) 
     echo "### Most recent bucket file is $latestLmeBucketFile"
-    
-    fValueBrikLabels=$( 3dinfo -label $latestLmeBucketFile | tr "|" "\n" | grep "F-value" | grep -v "Intercept" | tr "\n" " " 2> /dev/null )
-    tValueBrikLabels=$( 3dinfo -label $latestLmeBucketFile | tr "|" "\n" | grep "t-value" | grep -v "Intercept" | tr "\n" " " 2> /dev/null )
-    
-    echo "*** Got the following F value brik labels from the LME bucket: $fValueBrikLabels"
-    echo "*** Got the following T value brik labels from the LME bucket: $tValueBrikLabels"
 
-    ## ####################################################################################################
-    ## Whole brain mask
-    ## ####################################################################################################
+    OIFS="$IFS"
+    IFS=';'
+    fValueBrikLabels=( $( 3dinfo -label $latestLmeBucketFile | tr "|" "\n" | grep " F$" | grep -v "Intercept" | tr "\n" ";" 2> /dev/null ) )
+    zValueBrikLabels=( $( 3dinfo -label $latestLmeBucketFile | tr "|" "\n" | grep "Z$" | grep -v "Intercept" | tr "\n" ";" 2> /dev/null ) )
+    IFS="$OIFS"
+    
+    echo "*** Got the following F value brik labels from the LME bucket: ${fValueBrikLabels[@]}"
+    echo "*** Got the following Z value brik labels from the LME bucket: ${zValueBrikLabels[@]}"
 
-    cstempPrefix=CStemp.fwhm${usedFwhm}
-    if [ ! -f ${cstempPrefix}.NN1.1D ] ; then
+    side="1sided"
+    
+    cstempPrefix=$( makeClustSimFilePrefix $groups $usedFwhm )
+    if [[ ! -f ${cstempPrefix}.NN${NN}_${side}.1D ]] ; then
 	echo "*** Running 3dClustSim"
-	#export OMP_NUM_THREADS=10
-	if [ -f $GROUP_RESULTS/mask+tlrc.HEAD ] ; then 
-	    3dClustSim -mask mask+tlrc.HEAD -fwhm ${usedFwhm} -niml -prefix ${cstempPrefix}
+	echo "*** Output will be saved to files begining with: $cstempPrefix"
+	export OMP_NUM_THREADS=40
+	if [[ -f $GROUP_RESULTS/mask.grey.$groups.union.masked+tlrc.HEAD ]] ; then 
+	    3dClustSim -mask $GROUP_RESULTS/mask.grey.$groups.union.masked+tlrc.HEAD -fwhm ${usedFwhm} -both -prefix ${cstempPrefix}
 	else 
-	    3dClustSim -mask $MDD_STANDARD/MNI152_T1_3mm_brain_mask.nii.gz  -fwhm ${usedFwhm} -niml -prefix ${cstempPrefix}
+	    3dClustSim -mask $MDD_STANDARD/MNI152_T1_3mm_brain_mask.nii.gz  -fwhm ${usedFwhm} -both -prefix ${cstempPrefix}
 	fi
+
+	mv -f 3dClustSim.cmd ${cstempPrefix}.3dClustSim.cmd
     fi
-    3drefit \
-	-atrstring AFNI_CLUSTSIM_NN1  file:${cstempPrefix}.NN1.niml \
-	-atrstring AFNI_CLUSTSIM_MASK file:${cstempPrefix}.mask \
-	-atrstring AFNI_CLUSTSIM_NN2  file:${cstempPrefix}.NN2.niml \
-	-atrstring AFNI_CLUSTSIM_NN3  file:${cstempPrefix}.NN3.niml \
-	$latestLmeBucketFile
+    addStatTableCmd="$( cat ${cstempPrefix}.3dClustSim.cmd ) $latestLmeBucketFile"
+    echo "*** Statistic table addition command is: $addStatTableCmd"
+    eval "$addStatTableCmd"
+
+    ## ####################################################################################################
+    ## Clustering begins in ernest here
+    ## ####################################################################################################    
     
-    for fLabel in $fValueBrikLabels ; do
-	fixedFLabel=$( fixStatLabel $fLabel ) 
+    for fLabel in "${fValueBrikLabels[@]}" ; do
 	
-	fValueBrikId=$( 3dinfo -label2index $fLabel $latestLmeBucketFile 2> /dev/null ) 
-	echo "### **************************************"
-	echo "### Processing the $fLabel subbrik"
-	echo "### Parameters are:"
-	echo "### $latestLmeBucketFile: $fLabel $fValueBrikId"
-	if [ $fLabel == "stimulus.F-value" ] ; then 
-	    ## pick the p-values here 
-	    pValue=0.000100
-	    cPvalue=0.010
-	else 
-	    ## pick the p-values here 
-	    pValue=0.050000
-	    cPvalue=0.050
+	fixedFLabel=$( fixStatLabel "$fLabel" ) 
+	fValueBrikId=$( 3dinfo -label2index "$fLabel" $latestLmeBucketFile 2> /dev/null )
+	nVoxels=$( extractNVoxels $NN $cPvalue $pValue ${cstempPrefix} $side )
+	if [[ "$nVoxels" == "NA" ]] ; then
+	    echo "*** Couldn't get the correct number of voxels to go with pvalue=$pValue and corrected pvalue=$cPvalue"
+	    echo "*** You may need to pad these values with zeros to ensure you match the correct row and column in $cstempPrefix.NN${NN}_${side}.1D"
+	    exit
 	fi
-	
-	nVoxels=$( extractNVoxels $NN $cPvalue $pValue ${cstempPrefix} ) 
 	df=$( extractFStatpars $latestLmeBucketFile $fValueBrikId )
-	
 	fThreshold=$( cdf -p2t fift $pValue $df | sed 's/t = //' )
+	
+	echo "### **************************************"
+	echo "### Processing the \"$fLabel\" subbrik"
+	echo "### Parameters are:"
+	echo "### $latestLmeBucketFile: \'$fLabel\' $fValueBrikId"
 	#echo "### fwhm = ${fwhm[3]}"
 	echo "### fwhm = ${usedFwhm}"
 	echo "### fLabel = $fLabel"
@@ -281,11 +327,11 @@ for seed in $seeds ; do
 	echo "### corrected  pValue = $cPvalue"
 
 	suffix=fwhm${usedFwhm}.$task.$groups.$seedName.$fixedFLabel
-	mddOnlySuffix=fwhm${usedFwhm}.$task.mddOnly.$seedName.$fixedFLabel
-	ctrlOnlySuffix=fwhm${usedFwhm}.$task.ctrlOnly.$seedName.$fixedFLabel
+	#mddOnlySuffix=fwhm${usedFwhm}.$task.mddOnly.$seedName.$fixedFLabel
+	#ctrlOnlySuffix=fwhm${usedFwhm}.$task.ctrlOnly.$seedName.$fixedFLabel
 	
-	#3dclust -1Dformat -savemask clorder.$suffix -nosum -1dindex $fValueBrikId -1tindex $fValueBrikId -1noneg -2thresh -$fThreshold $fThreshold \
-	#    -dxyz=1 $rmm $nVoxels $latestLmeBucketFile  > clust.$suffix.txt
+	# #3dclust -1Dformat -savemask clorder.$suffix -nosum -1dindex $fValueBrikId -1tindex $fValueBrikId -1noneg -2thresh -$fThreshold $fThreshold \
+	# #    -dxyz=1 $rmm $nVoxels $latestLmeBucketFile  > clust.$suffix.txt
 
 	3dmerge -session . -prefix clorder.$suffix -1noneg -2thresh -$fThreshold $fThreshold -dxyz=1 -1clust_order $rmm $nVoxels -1erode 50 -1dilate -1dindex $fValueBrikId -1tindex $fValueBrikId $latestLmeBucketFile
 	3dclust -1Dformat -nosum -dxyz=1 $rmm $nVoxels clorder.$suffix+tlrc.HEAD > clust.$suffix.txt
@@ -297,98 +343,78 @@ for seed in $seeds ; do
 	    nClusters=$( 3dBrickStat -max clorder.$suffix+tlrc.HEAD 2> /dev/null | tr -d ' ' )
 
 	    3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD $bucketFilename         > roiStats.$suffix.txt
-	    3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD $ctrlOnlyBucketFilename > roiStats.$ctrlOnlySuffix.txt
-	    3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD $mddOnlyBucketFilename  > roiStats.$mddOnlySuffix.txt
+	    #3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD $ctrlOnlyBucketFilename > roiStats.$ctrlOnlySuffix.txt
+	    #3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD $mddOnlyBucketFilename  > roiStats.$mddOnlySuffix.txt
 	    
 	    3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD ${latestLmeBucketFile}\[$fValueBrikId\]         > roiStats.$suffix.averageFvalue.txt
 
-	    3drefit \
-		-atrstring AFNI_CLUSTSIM_NN1  file:${cstempPrefix}.NN1.niml \
-		-atrstring AFNI_CLUSTSIM_MASK file:${cstempPrefix}.mask \
-		-atrstring AFNI_CLUSTSIM_NN2  file:${cstempPrefix}.NN2.niml \
-		-atrstring AFNI_CLUSTSIM_NN3  file:${cstempPrefix}.NN3.niml \
-		clorder.$suffix+tlrc.HEAD
-	    3drefit -cmap INT_CMAP clorder.$suffix+tlrc.HEAD
+	     3drefit -cmap INT_CMAP clorder.$suffix+tlrc.HEAD
 	else
 	    nClusters=0
 	    echo "*** WARNING No clusters found!"
 	fi
-	echo "$seedName,${usedFwhm},$fLabel,$fValueBrikId,$fThreshold,$rmm,$nVoxels,$df,$pValue,$cPvalue,$nClusters,$mask,$latestLmeBucketFile" >> $csvFile
+	echo "$analysis,$seedName,${usedFwhm},$fLabel,$fValueBrikId,$fThreshold,$rmm,$nVoxels,$df,$pValue,$cPvalue,$nClusters,$latestLmeBucketFile" >> $csvFile
     done ## end of for fLabel in $fValueBrikLabels ; do
-    
-    for tLabel in $tValueBrikLabels ; do
-	fixedTLabel=$( fixStatLabel $tLabel ) 
-	tValueBrikId=$( 3dinfo -label2index $tLabel $latestLmeBucketFile 2> /dev/null )
-	tContrastBrikId=$( expr $tValueBrikId - 1 )
-	echo "### **************************************"
-	echo "### Processing the $tLabel subbrik"
-	echo "### Parameters are:"
-	echo "### $latestLmeBucketFile: $tLabel $tValueBrikId"
 
-	## pick the p-values here 
-	if [ $tLabel == "win-loss.t-value" ] ; then 
-	    ## pick the p-values here 
-	    pValue=0.001000
-	    cPvalue=0.050
-	elif [ $tLabel == "FRT-noFRT.t-value" ] ; then 
-	    ## pick the p-values here 
-	    pValue=0.005000
-	    cPvalue=0.050
-	else 
-	    pValue=0.050000
-	    cPvalue=0.050
+    echo "####################################################################################################"
+
+    side="2sided"
+    for zLabel in "${zValueBrikLabels[@]}" ; do
+
+	fixedZLabel=$( fixStatLabel "$zLabel" ) 
+	zValueBrikId=$( 3dinfo -label2index "$zLabel" $latestLmeBucketFile 2> /dev/null )
+	zContrastBrikId=$( expr $zValueBrikId - 1 )
+	nVoxels=$( extractNVoxels $NN $cPvalue $pValue ${cstempPrefix} $side )
+	if [[ "$nVoxels" == "NA" ]] ; then
+	    echo "*** Couldn't get the correct number of voxels to go with pvalue=$pValue and corrected pvalue=$cPvalue"
+	    echo "*** You may need to pad these values with zeros to ensure you match the correct row and column in $cstempPrefix.NN${NN}_${side}.1D"
+	    exit
 	fi
+	## df=$( extractTStatpars $latestLmeBucketFile $tValueBrikId )
+	zThreshold=$( cdf -p2t fizt $pValue | sed 's/t = //' )
 
-	nVoxels=$( extractNVoxels $NN $cPvalue $pValue ${cstempPrefix} ) 
-	df=$( extractTStatpars $latestLmeBucketFile $tValueBrikId )
-	
-	tThreshold=$( cdf -p2t fitt $pValue $df | sed 's/t = //' )
+	echo "### **************************************"
+	echo "### Processing the \"$zLabel\" subbrik"
+	echo "### Parameters are:"
+	echo "### $latestLmeBucketFile: \'$zLabel\' $zValueBrikId"
 	#echo "### fwhm = ${fwhm[3]}"
 	echo "### fwhm = ${usedFwhm}"
-	echo "### tLabel = $fLabel"
-	echo "### fixedTLabel = $fixedTLabel"
-	echo "### tContrastBrikId = $tContrastBrikId"
-	echo "### tValueBrikId = $tValueBrikId"
-	echo "### tThreshold = $tThreshold"
+	echo "### zLabel = $zLabel"
+	echo "### fixedZLabel = $fixedZLabel"
+	echo "### zContrastBrikId = $zContrastBrikId"
+	echo "### zValueBrikId = $zValueBrikId"
+	echo "### zThreshold = $zThreshold"
 	echo "### rmm = $rmm"
 	echo "### nVoxels = $nVoxels"
-	echo "### df = $df"
+	## echo "### df = $df"
 	echo "### voxelwise pValue = $pValue"
 	echo "### corrected  pValue = $cPvalue"
-	
-	suffix=fwhm${usedFwhm}.$task.$groups.$seed.$fixedTLabel
-	#mddOnlySuffix=fwhm${usedFwhm}.$task.mddOnly.$seed.$fixedTLabel
-	#ctrlOnlySuffix=fwhm${usedFwhm}.$task.ctrlOnly.$seed.$fixedTLabel
 
-	3dmerge -session . -prefix clorder.$suffix -2thresh -$tThreshold $tThreshold -dxyz=1 -1clust_order $rmm $nVoxels -1erode 50 -1dilate -1dindex $tContrastBrikId -1tindex $tValueBrikId  $latestLmeBucketFile  
-	
+	suffix=fwhm${usedFwhm}.$task.$groups.$seedName.$fixedZLabel
+	# #mddOnlySuffix=fwhm${usedFwhm}.$task.mddOnly.$seed.$fixedTLabel
+	# #ctrlOnlySuffix=fwhm${usedFwhm}.$task.ctrlOnly.$seed.$fixedTLabel
+
+	3dmerge -session . -prefix clorder.$suffix -2thresh -$zThreshold $zThreshold -dxyz=1 -1clust_order $rmm $nVoxels -1erode 50 -1dilate -1dindex $tContrastBrikId -1tindex $tValueBrikId  $latestLmeBucketFile  
 	3dclust -1Dformat -nosum -dxyz=1 $rmm $nVoxels clorder.$suffix+tlrc.HEAD > clust.$suffix.txt
 
-	if [ -f clorder.$suffix+tlrc.HEAD ] ; then 
+	if [[ -f clorder.$suffix+tlrc.HEAD ]] ; then 
 
-	    3dcalc -a clorder.${suffix}+tlrc.HEAD -b ${latestLmeBucketFile}\[$tContrastBrikId\] -expr "step(a)*b" -prefix clust.$suffix
+	    3dcalc -a clorder.${suffix}+tlrc.HEAD -b ${latestLmeBucketFile}\[$zContrastBrikId\] -expr "step(a)*b" -prefix clust.$suffix
   
 	    nClusters=$( 3dBrickStat -max clorder.$suffix+tlrc.HEAD 2> /dev/null | tr -d ' ' )
 	    3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD $bucketFilename         > roiStats.$suffix.txt
 	    #3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD $ctrlOnlyBucketFilename > roiStats.$ctrlOnlySuffix.txt
 	    #3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD $mddOnlyBucketFilename  > roiStats.$mddOnlySuffix.txt
 
-	    3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD ${latestLmeBucketFile}\[$tContrastBrikId\]      > roiStats.$suffix.averageContrastValue.txt
-	    3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD ${latestLmeBucketFile}\[$tValueBrikId\]         > roiStats.$suffix.averageTValue.txt
+	    3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD ${latestLmeBucketFile}\[$zContrastBrikId\]      > roiStats.$suffix.averageContrastValue.txt
+	    3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD ${latestLmeBucketFile}\[$zValueBrikId\]         > roiStats.$suffix.averageZValue.txt
 
-
-	    3drefit \
-		-atrstring AFNI_CLUSTSIM_NN1  file:${cstempPrefix}.NN1.niml \
-		-atrstring AFNI_CLUSTSIM_MASK file:${cstempPrefix}.mask \
-		-atrstring AFNI_CLUSTSIM_NN2  file:${cstempPrefix}.NN2.niml \
-		-atrstring AFNI_CLUSTSIM_NN3  file:${cstempPrefix}.NN3.niml \
-		clorder.$suffix+tlrc.HEAD
 	    3drefit -cmap INT_CMAP clorder.$suffix+tlrc.HEAD
 	else
 	    nClusters=0
 	    echo "*** WARNING No clusters found!"
 	fi
-	echo "$seedName,${usedFwhm},$tLabel,$tValueBrikId,$tThreshold,$rmm,$nVoxels,$df,$pValue,$cPvalue,$nClusters,$mask,$latestLmeBucketFile" >> $csvFile
+	echo "$analysis,$seedName,${usedFwhm},$zLabel,$zValueBrikId,$zThreshold,$rmm,$nVoxels,NA,$pValue,$cPvalue,$nClusters,$latestLmeBucketFile" >> $csvFile
     done
 
 done ## end of for seed in $seeds ; do
