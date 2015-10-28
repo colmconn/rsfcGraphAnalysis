@@ -263,12 +263,15 @@ readCsvFile <- function (inFilename, inSubjectColumnName="ID") {
     return(rCsv)
 }
 
+
 read.change.score.file <- function (in.variable) {
 
     if (grepl("rstandard", rvVariable, fixed=FALSE))
         change.score.filename=file.path(admin.data.dir, sprintf("new.mdd.%s.score.csv", in.variable))
+    else if (baselineOnly)
+        change.score.filename=file.path(admin.data.dir, sprintf("new.mdd.%s.timepoint.a.score.csv", in.variable))
     else
-        change.score.filename=file.path(admin.data.dir, sprintf("new.mdd.%s.change.score.csv", in.variable))                
+        change.score.filename=file.path(admin.data.dir, sprintf("new.mdd.%s.change.score.csv", in.variable))
     
     cat("*** Change score file is", change.score.filename, "\n")
     if (file.exists(change.score.filename))
@@ -517,11 +520,11 @@ graphRegressions <- function(melted.mgd, group.results.dir, rvVariable, rvName, 
             stat_smooth(method="rlm", se=FALSE, color="black") +
                 labs(title = substituteShortLabels(level), x=x.axis.label, y=y.axis.label) +
                     my_theme
-        if (grepl("\\.reversed$", group.results.dir)) {
-            graph=graph + scale_y_continuous(labels = percent)
-        } else { 
-            graph=graph + scale_x_continuous(labels = percent)
-        }
+        ## if (grepl("\\.reversed$", group.results.dir)) {
+        ##     graph=graph + scale_y_continuous(labels = percent)
+        ## } else { 
+        ##     graph=graph + scale_x_continuous(labels = percent)
+        ## }
 
         if ( indicate.treatments ) {
             cat ("*** Adding treatment indicators to graphs\n")
@@ -618,23 +621,26 @@ medsAndTreatment.filename=file.path(admin.data.dir, "new_medsAndTreatment.csv")
 medsAndTreatment=readCsvFile(medsAndTreatment.filename, "SubjID")
 
 regressionVariables=list(
-    ## list(variable="CDRS.t.score.diff",      name="Children's Depression Rating Scale\n(Baseline to 3 Months Change)"),
-    ## list(variable="MASC.tscore.diff",       name="Multidimensional Anxiety Scale for Children\n(Standardized; Baseline to 3 Months Change)"),
-    ## list(variable="CGAS.diff",              name="Children's Global Assessment Scale\n(Baseline to 3 Months Change)"),
-    ## list(variable="RADS.Total.tscore.diff", name="Reynolds Adolescent Depression Scale Total\n(Standardized; Baseline to 3 Months Change)"),
+    ## list(variable="CDRS.t.score.diff",             name="Children's Depression Rating Scale\n(Baseline to 3 Months Change)"),
+    ## list(variable="MASC.tscore.diff",              name="Multidimensional Anxiety Scale for Children\n(Standardized; Baseline to 3 Months Change)"),
+    ## list(variable="CGAS.diff",                     name="Children's Global Assessment Scale\n(Baseline to 3 Months Change)"),
+    ## list(variable="RADS.Total.tscore.diff",        name="Reynolds Adolescent Depression Scale Total\n(Standardized; Baseline to 3 Months Change)"),
     
     ## list(variable="CDRS.t.score.scaled.diff",      name="Children's Depression\nRating Scale\n(Baseline to 3 Months Change)")#,
 
+    ## list(variable="CDRS.t.score.scaled",           name="Children's Depression\nRating Scale (Baseline)"),
+    ## list(variable="CDRS.t.score",                  name="Children's Depression\nRating Scale (Baseline)")#,    
+    
     ## list(variable="CDRS.t.score.scaled.diff",      name=expression(paste(Delta, " CDRS-R")))#,
-    list(variable="CDRS.t.score.rstandard",      name=expression(paste(Delta, " CDRS-R")))#,    
-
+    list(variable="CDRS.t.score.rstandard",        name=expression("CDRS-R Residual"))#,    
+    
     ## list(variable="CGAS.scaled.diff",              name="Children's Global Assessment Scale\n(Baseline to 3 Months Change)")
     
-    ##    list(variable="MASC.tscore.scaled.diff",       name="Multidimensional Anxiety Scale for Children\n(Standardized; Baseline to 3 Months Change)"),
+    ## list(variable="MASC.tscore.scaled.diff",       name="Multidimensional Anxiety Scale for Children\n(Standardized; Baseline to 3 Months Change)"),
     ## list(variable="RADS.Total.tscore.scaled.diff", name="Reynolds Adolescent Depression Scale Total\n(Standardized; Baseline to 3 Months Change)")
     
     ## list(variable="BDI.II.Total.diff",             name="Beck Depression Inventory II (A to C Change)"),
-    ## list(variable="CDI.Total.diff",             name="Children's Depression Inventory (A to C Change)")
+    ## list(variable="CDI.Total.diff",                name="Children's Depression Inventory (A to C Change)")
 )
 
 groups="mddOnly"
@@ -664,15 +670,18 @@ my_theme=
 ## seeds=readSeedsFile(file.path(config.data.dir, "juelich_whole_amygdala_seeds.txt"))
 ## numberOfSeeds=length(seeds)
 
-seedFiles=
-    sapply(c("juelich_amygdala_seeds_weights.txt",
-             "juelich_whole_amygdala_seeds.txt"),
-           function(xx) {
-               file.path(config.data.dir, xx)
-           })
+## seedFiles=
+##     sapply(c("juelich_amygdala_seeds_weights.txt",
+##              "juelich_whole_amygdala_seeds.txt"),
+##            function(xx) {
+##                file.path(config.data.dir, xx)
+##            })
 
 ##seedFiles=file.path(config.data.dir, "juelich_amygdala_seeds_weights.txt")
-##seedFiles=file.path(config.data.dir, "juelich_whole_amygdala_seeds.txt")
+seedFiles=file.path(config.data.dir, "juelich_whole_amygdala_seeds.txt")
+
+baselineOnly=TRUE
+baselineOnly=FALSE
 
 for (seedFile in seedFiles) {
 
@@ -690,6 +699,9 @@ for (seedFile in seedFiles) {
 
         group.data.dir=file.path(data.dir, paste("Group.data", rvVariable, "withAandC", sep="."))
         group.results.dir=file.path(data.dir, paste("Group.results", rvVariable, "withAandC.reversed", sep="."))
+
+        ## group.data.dir=file.path(data.dir, paste("Group.data", rvVariable, sep="."))
+        ## group.results.dir=file.path(data.dir, paste("Group.results", rvVariable, "reversed", sep="."))
 
         publicationTableFilename=file.path(group.results.dir, paste("publicationTable", usedFwhm, groups, "csv", sep="."))
         ## if (file.exists(publicationTableFilename)) {
