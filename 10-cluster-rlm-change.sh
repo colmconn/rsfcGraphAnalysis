@@ -43,9 +43,11 @@ cleanedSuffix=""
 # regressionVariables="CGAS.scaled.diff CDRS.t.score.scaled.diff"
 # regressionVariables="CDRS.t.score.scaled.diff"
 
-regressionVariables="CDRS.t.score.rstandard"
+#regressionVariables="CDRS.t.score.rstandard"
 
 #regressionVariables="CDRS.t.score.scaled"
+
+regressionVariables="CDRS.t.score"
 
 task="restingstate"
 
@@ -261,11 +263,11 @@ fi
 
 for regressionVariable in $regressionVariables ; do
 
-    GROUP_DATA=$DATA/Group.data.$regressionVariable.withAandC${cleanedSuffix}
-    GROUP_RESULTS=$DATA/Group.results.$regressionVariable.withAandC${cleanedSuffix}.reversed
+    # GROUP_DATA=$DATA/Group.data.$regressionVariable.withAandC${cleanedSuffix}
+    # GROUP_RESULTS=$DATA/Group.results.$regressionVariable.withAandC${cleanedSuffix}.reversed
 
-    #GROUP_DATA=$DATA/Group.data.$regressionVariable${cleanedSuffix}
-    #GROUP_RESULTS=$DATA/Group.results.$regressionVariable${cleanedSuffix}.reversed
+    GROUP_DATA=$DATA/Group.data.$regressionVariable${cleanedSuffix}
+    GROUP_RESULTS=$DATA/Group.results.$regressionVariable${cleanedSuffix}.reversed
 
     #GROUP_RESULTS=$DATA/Group.results.$regressionVariable.withAandC${cleanedSuffix}
 
