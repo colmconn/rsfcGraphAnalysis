@@ -237,7 +237,8 @@ save.usable.subjects.residualized.scores <- function (in.usable.subjects.list, i
 
 save.timepoint.a.subjects.scores <- function (in.usable.subjects.list, in.variable, in.timepoint=NULL) {
     mdd.list.filename=file.path(admin.data.dir, sprintf("new.mdd.%s.timepoint.a.score.csv", in.variable))
-    mdd.list=in.usable.subjects.list[, c("ID", "Grp", "age.in.years", colnames(in.usable.subjects.list)[grep("scaled", colnames(in.usable.subjects.list), fixed=TRUE)])]
+    ## mdd.list=in.usable.subjects.list[, c("ID", "Grp", "age.in.years", colnames(in.usable.subjects.list)[grep("scaled", colnames(in.usable.subjects.list), fixed=TRUE)])]
+    mdd.list=in.usable.subjects.list[, c("ID", "Grp", "age.in.years", colnames(in.usable.subjects.list)[grep(in.variable, colnames(in.usable.subjects.list), fixed=TRUE)])]    
 
     if (! is.null(in.timepoint) ) {
         mdd.list$ID = paste(mdd.list$ID, in.timepoint, sep="_")        
@@ -247,6 +248,14 @@ save.timepoint.a.subjects.scores <- function (in.usable.subjects.list, in.variab
     write.csv(mdd.list, mdd.list.filename, quote=FALSE, col.names=FALSE, row.names=FALSE)
 }
 
+
+save.usable.subjects <- function (in.data, in.variable) {
+    filename=file.path(admin.data.dir, sprintf("new.%s.timepoint.a.and.c.score.csv", in.variable))
+    cat(sprintf("*** Writing usable subjects for the %s variable list to %s\n" , in.variable, filename))
+    ## print(in.data)
+    write.csv(in.data, filename, quote=FALSE, col.names=FALSE, row.names=FALSE)
+
+}
 ## new.analyse <- function (in.data, y.axis, na.action="na.omit") {
 
 ##     cat("####################################################################################################\n")
@@ -667,16 +676,19 @@ for (variable in c("CDRS.t.score") ) {
     
     ## variable.summary=new.analyse(subjects.lists[["usable.long"]], variable)
 
-
     ## cat("*** subjects.lists\n")
     ## print(subjects.lists)
     ## cat("*** sl\n")
     ## print(sl)
 
     usable.time.a=scale.variable(find.usable.timepoint.a.subjects(subjects.lists, "MDD"), variable)
+
+    ## save.usable.subjects(subjects.lists[["usable.long"]], variable)
+                         
     ## print(usable.time.a)
 
     ## save.timepoint.a.subjects.scores(usable.time.a, paste(variable, "scaled", sep="."))
+    save.timepoint.a.subjects.scores(usable.time.a, variable)    
 
     
     ## change.score.analyse(subjects.lists, sl, variable)    
