@@ -1,7 +1,6 @@
 rm(list=ls())
 graphics.off()
 
-
 ## Reads the seed file and does the (crude) equivalent of BASH variable
 ## substitution
 readSeedsFile <- function (inSeedsFile) {
@@ -102,7 +101,11 @@ seeds.data.dir=file.path(data.dir, "seeds")
 demographicsFilename=file.path(admin.data.dir, "0-data_entry_current_2014.csv")
 demographics=readCsvFile(demographicsFilename)
 
-seeds=readSeedsFile(file.path(config.data.dir, "juelich_amygdala_seeds_weights.txt"))
+wasiFilename=file.path(admin.data.dir, "WASI.csv")
+wasi=readCsvFile(wasiFilename, "SubID")
+
+## seeds=readSeedsFile(file.path(config.data.dir, "juelich_amygdala_seeds_weights.txt"))
+seeds=readSeedsFile(file.path(config.data.dir, "juelich_whole_amygdala_seeds.txt"))
 
 grouping="mddAndCtrl"
 
@@ -118,21 +121,48 @@ for (seed in seeds) {
 
     bucketListFilename=file.path(group.data.dir, paste("bucketList", grouping, seedName, "txt", sep="."))
     cat("*** Reading", bucketListFilename, "\n")
-    bucketList=read.table(bucketListFilename, header=FALSE)
+    bucketList=read.table(bucketListFilename, header=FALSE, as.is=TRUE)
 
-    mgd=cbind(subjectOrder, bucketList, demographics[match(subjectOrder$subject, demographics$ID), c("Grp", "Gender", "DOB", "MRI")])
-    mgd[mgd$subject=="378", "Gender"]="F"
+    mgd=cbind(subjectOrder, bucketList,
+        demographics[match(subjectOrder$subject, demographics$ID), c("Grp", "Gender", "DOB", "MRI")],
+        wasi        [match(subjectOrder$subject, wasi$SubID),      c("Full")])
+     ## wasi        [match(subjectOrder$subject, wasi$SubID),      c("Verbal", "Performance", "Full")])    
+
+    if (any(mgd$subject=="378"))
+        mgd[mgd$subject=="378", "Gender"]="F"
+
     mgd$subject=paste(mgd$subject, "A", sep="_")
-    colnames(mgd)=c("Subj", "InputFile", "Group", "Gender", "DOB", "MRI")
+    mgd=droplevels(mgd)        
+    colnames(mgd)=c("Subj", "InputFile", "Group", "Gender", "DOB", "MRI", "Full")
     
     mgd=fixDates(mgd)
     mgd=computeAge(mgd)
-    ## reorder the columns to suite 3dMVM
-    mgd=mgd[, c("Subj", "Group", "Gender", "age.in.years", "InputFile")]
+    colnames(mgd)=c("Subj", "InputFile", "Group", "Gender", "DOB", "MRI", "Full", "age")    
+    print(head(mgd))
 
+    ## mgd[, c("age", "Full")] = scale(mgd[, c("age", "Full")], center=TRUE, scale=FALSE)
+    ## don't scale the Full IQ as this differs between groups
+    mgd[, c("age")] = scale(mgd[, c("age")], center=TRUE, scale=FALSE)
+
+    ## tapply(mgd$Full, list(mgd$Group), mean) # get the means of the
+    ## groups then repeat each as manu times as there members in each
+    ## group and provide the resultant vector of repeated means to
+    ## scale to subtract from each original value. The results is Full
+    ## IQ centered within group
+    mgd[, c("Full")] = mgd[, c("Full")] - rep(tapply(mgd$Full, list(mgd$Group), mean), table(mgd$Group))
+    
     mgd$InputFile=sub("z-score", "z-score.masked", mgd$InputFile, fixed=TRUE)
-
-    dataTableFilename=file.path(group.data.dir, paste("dataTable", grouping, seedName, "txt", sep="."))
+    
+    ## reorder the columns to suite 3dMVM
+    ss=mgd[, c("Subj", "Group", "Gender", "Full", "InputFile")]
+    dataTableFilename=file.path(group.data.dir, paste("dataTable", grouping, "group", "and", "gender", seedName, "txt", sep="."))
     cat("*** Writing data table to", dataTableFilename, "\n")
-    write.table(mgd, file=dataTableFilename, quote=FALSE, col.names=TRUE, row.names=FALSE, eol=" \\\n")
+    write.table(format(ss, digits=4), file=dataTableFilename, quote=FALSE, col.names=TRUE, row.names=FALSE, eol=" \\\n")
+
+    ## reorder the columns to suite 3dMVM
+    ss=mgd[, c("Subj", "Group", "age", "Full", "InputFile")]
+    dataTableFilename=file.path(group.data.dir, paste("dataTable", grouping, "group", "and", "age", seedName, "txt", sep="."))
+    cat("*** Writing data table to", dataTableFilename, "\n")
+    write.table(format(ss, digits=4), file=dataTableFilename, quote=FALSE, col.names=TRUE, row.names=FALSE, eol=" \\\n")
+
 }
