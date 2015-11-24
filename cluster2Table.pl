@@ -3,6 +3,7 @@
 use strict;
 use warnings;
 use File::Find;
+use File::Basename;
 use Getopt::Long;
 
 ##use File::Grep qw ( fgrep );
@@ -78,12 +79,12 @@ foreach my $groupDir ( @groupDirs ) {
 
   foreach my $cf ( @clusterFiles ) {
     my $clusterFile = "$cf";
-    print "Processing the clusters in $clusterFile and writing ";
+    print "Processing the clusters in " . basename($clusterFile) . " and writing ";
 
     my $clusterLocations = $clusterFile;
     $clusterLocations =~ s/clust\.(.*)\.txt/clusterLocations.$1.csv/;
 
-    print "$clusterLocations\n";
+    print basename($clusterLocations) . "\n";
 
     if ( -f $clusterFile ) {
       my $h=hasClusters($clusterFile);
