@@ -46,8 +46,9 @@ while true ; do
 	-j|--subjects)
 	    subjectsFile=$2
 	    if [[ -f $subjectsFile ]] ; then
-		echo "*** Reading subject list from $subjectsFile" 
-		subjects="$subjects $( cat $subjectsFile )"
+		nsubjects=$( cat $subjectsFile | sed 1d | wc -l ) 
+		echo "*** Reading $nsubjects subjects from $subjectsFile" 
+		subjects="$subjects $( cat $subjectsFile | sed 1d )"
 	    else
 		echo "*** No such file: $subjectsFile"
 	    fi
@@ -165,11 +166,14 @@ function makeMask {
     
 ## makeMask $GROUP_DATA $GROUP_RESULTS $groups $seedName
 
-makeMask 
+makeMask
+## pwd
+## ls -l mask*
 mv -f $DATA/mask.grey.$groups.* $group_results
 
 for ff in $group_results/mask.grey.$groups.*HEAD ; do
-    if [[ ! -f ${ff%%+*}.masked+tlrc.HEAD ]] ; then 
+    if [[ ! -f ${ff%%+*}.masked+tlrc.HEAD ]] ; then
+	echo "*** Masking with MNI152 T1 3mm brain mask"
 	3dcalc -a $MDD_STANDARD/MNI152_T1_3mm_brain_mask.nii.gz -b $ff -expr "a*b" -prefix ${ff%%+*}.masked
     fi
 done
