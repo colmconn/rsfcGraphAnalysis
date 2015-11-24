@@ -39,8 +39,14 @@ function makeClustSimFilePrefix {
     local group=$1
     local fwhm="$2"
 
-    prefix="CStemp.fwhm${usedFwhm}.${group}"
+    local pvalue="$3"
+    local cpvalue="$4"
 
+    if [[ -z "$pvalue" ]] || [[ -z "$cpvalue" ]] ; then 
+	prefix="CStemp.fwhm${usedFwhm}.${group}"
+    else
+	prefix=CStemp.fwhm${usedFwhm}.pvalue.$pvalue.cPvalue.$cpvalue
+    fi
     echo $prefix
 }
 
@@ -93,28 +99,29 @@ function extractNVoxels {
     local side="$5"
 
     #0.100  0.090  0.080  0.070  0.060  0.050  0.040  0.030  0.020  0.010
-    if [ $cPValue == 0.100 ] ; then
-	pvalueColumn=2
-    elif [ $cPValue == 0.090 ] ; then
-	pvalueColumn=3
-    elif [ $cPValue == 0.080 ] ; then
-	pvalueColumn=4
-    elif [ $cPValue == 0.070 ] ; then
-	pvalueColumn=5
-    elif [ $cPValue == 0.060 ] ; then
-	pvalueColumn=6
-    elif [ $cPValue == 0.050 ] ; then
-	pvalueColumn=7
-    elif [ $cPValue == 0.040 ] ; then
-	pvalueColumn=8
-    elif [ $cPValue == 0.030 ] ; then
-	pvalueColumn=9
-    elif [ $cPValue == 0.020 ] ; then
-	pvalueColumn=10
-    elif [ $cPValue == 0.010 ] ; then
-	pvalueColumn=11
-    fi
+    # if [ $cPValue == 0.100 ] ; then
+    # 	pvalueColumn=2
+    # elif [ $cPValue == 0.090 ] ; then
+    # 	pvalueColumn=3
+    # elif [ $cPValue == 0.080 ] ; then
+    # 	pvalueColumn=4
+    # elif [ $cPValue == 0.070 ] ; then
+    # 	pvalueColumn=5
+    # elif [ $cPValue == 0.060 ] ; then
+    # 	pvalueColumn=6
+    # elif [ $cPValue == 0.050 ] ; then
+    # 	pvalueColumn=7
+    # elif [ $cPValue == 0.040 ] ; then
+    # 	pvalueColumn=8
+    # elif [ $cPValue == 0.030 ] ; then
+    # 	pvalueColumn=9
+    # elif [ $cPValue == 0.020 ] ; then
+    # 	pvalueColumn=10
+    # elif [ $cPValue == 0.010 ] ; then
+    # 	pvalueColumn=11
+    # fi
 
+    pvalueColumn=2
     if [[ "X$pvalueColumn" == "X" ]] ; then
 	nVoxels="NA"
     else
@@ -268,7 +275,7 @@ for seed in $seeds ; do
     OIFS="$IFS"
     IFS=';'
     fValueBrikLabels=( $( 3dinfo -label $latestLmeBucketFile | tr "|" "\n" | grep " F$" | grep -v "Intercept" | tr "\n" ";" 2> /dev/null ) )
-    zValueBrikLabels=( $( 3dinfo -label $latestLmeBucketFile | tr "|" "\n" | grep "Z$" | grep -v "Intercept" | tr "\n" ";" 2> /dev/null ) )
+    zValueBrikLabels=( $( 3dinfo -label $latestLmeBucketFile | tr "|" "\n" | grep "Z$"  | grep -v "Intercept" | tr "\n" ";" 2> /dev/null ) )
     IFS="$OIFS"
     
     echo "*** Got the following F value brik labels from the LME bucket: ${fValueBrikLabels[@]}"
@@ -276,15 +283,15 @@ for seed in $seeds ; do
 
     side="1sided"
     
-    cstempPrefix=$( makeClustSimFilePrefix $groups $usedFwhm )
+    cstempPrefix=$( makeClustSimFilePrefix $groups $usedFwhm $pValue $cPvalue)
     if [[ ! -f ${cstempPrefix}.NN${NN}_${side}.1D ]] ; then
 	echo "*** Running 3dClustSim"
 	echo "*** Output will be saved to files begining with: $cstempPrefix"
 	export OMP_NUM_THREADS=40
 	if [[ -f $GROUP_RESULTS/mask.grey.$groups.union.masked+tlrc.HEAD ]] ; then 
-	    3dClustSim -mask $GROUP_RESULTS/mask.grey.$groups.union.masked+tlrc.HEAD -fwhm ${usedFwhm} -both -prefix ${cstempPrefix}
+	    3dClustSim -mask $GROUP_RESULTS/mask.grey.$groups.union.masked+tlrc.HEAD -fwhm ${usedFwhm} -both -prefix ${cstempPrefix}  -pthr $pValue -athr $cPvalue
 	else 
-	    3dClustSim -mask $MDD_STANDARD/MNI152_T1_3mm_brain_mask.nii.gz  -fwhm ${usedFwhm} -both -prefix ${cstempPrefix}
+	    3dClustSim -mask $MDD_STANDARD/MNI152_T1_3mm_brain_mask.nii.gz  -fwhm ${usedFwhm} -both -prefix ${cstempPrefix}  -pthr $pValue -athr $cPvalue
 	fi
 
 	mv -f 3dClustSim.cmd ${cstempPrefix}.3dClustSim.cmd
@@ -326,7 +333,7 @@ for seed in $seeds ; do
 	echo "### voxelwise pValue = $pValue"
 	echo "### corrected  pValue = $cPvalue"
 
-	suffix=fwhm${usedFwhm}.$task.$groups.$seedName.$fixedFLabel
+	suffix=fwhm${usedFwhm}.$task.$groups.$analysis.$seedName.$fixedFLabel
 	#mddOnlySuffix=fwhm${usedFwhm}.$task.mddOnly.$seedName.$fixedFLabel
 	#ctrlOnlySuffix=fwhm${usedFwhm}.$task.ctrlOnly.$seedName.$fixedFLabel
 	
@@ -348,7 +355,7 @@ for seed in $seeds ; do
 	    
 	    3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD ${latestLmeBucketFile}\[$fValueBrikId\]         > roiStats.$suffix.averageFvalue.txt
 
-	     3drefit -cmap INT_CMAP clorder.$suffix+tlrc.HEAD
+	    3drefit -cmap INT_CMAP clorder.$suffix+tlrc.HEAD
 	else
 	    nClusters=0
 	    echo "*** WARNING No clusters found!"
@@ -390,11 +397,11 @@ for seed in $seeds ; do
 	echo "### voxelwise pValue = $pValue"
 	echo "### corrected  pValue = $cPvalue"
 
-	suffix=fwhm${usedFwhm}.$task.$groups.$seedName.$fixedZLabel
+	suffix=fwhm${usedFwhm}.$task.$groups.$analysis.$seedName.$fixedZLabel
 	# #mddOnlySuffix=fwhm${usedFwhm}.$task.mddOnly.$seed.$fixedTLabel
 	# #ctrlOnlySuffix=fwhm${usedFwhm}.$task.ctrlOnly.$seed.$fixedTLabel
 
-	3dmerge -session . -prefix clorder.$suffix -2thresh -$zThreshold $zThreshold -dxyz=1 -1clust_order $rmm $nVoxels -1erode 50 -1dilate -1dindex $tContrastBrikId -1tindex $tValueBrikId  $latestLmeBucketFile  
+	3dmerge -session . -prefix clorder.$suffix -2thresh -$zThreshold $zThreshold -dxyz=1 -1clust_order $rmm $nVoxels -1erode 50 -1dilate -1dindex $zContrastBrikId -1tindex $zValueBrikId  $latestLmeBucketFile  
 	3dclust -1Dformat -nosum -dxyz=1 $rmm $nVoxels clorder.$suffix+tlrc.HEAD > clust.$suffix.txt
 
 	if [[ -f clorder.$suffix+tlrc.HEAD ]] ; then 
