@@ -101,8 +101,8 @@ scan.dates.from.data.spreadsheet$timepoint=as.character(scan.dates.from.data.spr
 cat("*** Looking up missing scan dates in the scan.dates.from.data.spreadsheet\n")
 for (ii in 1: dim(scan.dates)[1]) {
     if (is.na(scan.dates[ii, "date"])) { 
-        ## try to lookup the subject and timepoint in the ate from teh
-        ## spreadsheet maintained by the RAs
+        ## try to lookup the subject and timepoint in the data from
+        ## the spreadsheet maintained by the RAs
 
         cat("*** Looking for", scan.dates[ii, "subject"], "at timepoint", scan.dates[ii, "timepoint"], "in scan.dates.from.data.spreadsheet. Got:")
         scan.dates[ii, "date"]=scan.dates.from.data.spreadsheet[
