@@ -491,12 +491,12 @@ if ( Sys.info()["sysname"] == "Darwin" ) {
     cat(paste("Sorry can't set data directories for this computer\n"))
 }
 
-data.dir=normalizePath(file.path(root.dir, "sanDiego/rsfcGraphAnalysis/data/"))
-admin.data.dir=normalizePath(file.path(data.dir, "admin"))
-config.data.dir=normalizePath(file.path(data.dir, "config"))
-seeds.data.dir=normalizePath(file.path(data.dir, "seeds"))
-group.data.dir=normalizePath(file.path(data.dir, "Group.data"))
-group.results.dir=normalizePath(file.path(data.dir, "Group.results"))
+data.dir=file.path(root.dir, "sanDiego/rsfcGraphAnalysis/data/")
+admin.data.dir=file.path(data.dir, "admin")
+config.data.dir=file.path(data.dir, "config")
+seeds.data.dir=file.path(data.dir, "seeds")
+group.data.dir=file.path(data.dir, "Group.data")
+group.results.dir=file.path(data.dir, "Group.results")
 
 ## this file stores all of the demographics of interest, such as ID, group, and drug(s) of choice
 ## demographicsFilename=file.path(admin.data.dir, "0-data_entry_current_10152013.csv")
@@ -522,10 +522,10 @@ usedFwhm="4.2"
 
 groups="mddAndCtrl"
 
-seeds=readSeedsFile(file.path(config.data.dir, "juelich_amygdala_seeds_weights.txt"))
+## seeds=readSeedsFile(file.path(config.data.dir, "juelich_amygdala_seeds_weights.txt"))
 ## seeds=readSeedsFile(file.path(config.data.dir, "Harvard-Oxford_amygdala_seeds.txt"))
 
-## seeds=readSeedsFile(file.path(config.data.dir, "juelich_whole_amygdala_seeds.txt"))
+seeds=readSeedsFile(file.path(config.data.dir, "juelich_whole_amygdala_seeds.txt"))
 
 numberOfSeeds=length(seeds)
 cat(sprintf("*** Found %02d seeds in the seed file\n", length(seeds)))
