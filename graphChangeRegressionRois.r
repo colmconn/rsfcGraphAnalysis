@@ -266,12 +266,13 @@ readCsvFile <- function (inFilename, inSubjectColumnName="ID") {
 
 read.change.score.file <- function (in.variable) {
 
-    if (grepl("rstandard", rvVariable, fixed=FALSE))
-        change.score.filename=file.path(admin.data.dir, sprintf("new.mdd.%s.score.csv", in.variable))
+    if (grepl("both|rstandard", rvVariable, fixed=FALSE))
+        change.score.filename=file.path(admin.data.dir, sprintf("new.mdd.%s.scores.csv", in.variable))
     else if (baselineOnly)
         change.score.filename=file.path(admin.data.dir, sprintf("new.mdd.%s.timepoint.a.score.csv", in.variable))
     else
         change.score.filename=file.path(admin.data.dir, sprintf("new.mdd.%s.change.score.csv", in.variable))
+        ##change.score.filename=file.path(admin.data.dir, sprintf("new.mdd.%s.rstandard.score.csv", in.variable))        
     
     cat("*** Change score file is", change.score.filename, "\n")
     if (file.exists(change.score.filename))
@@ -416,9 +417,9 @@ generateGraphs <- function (group.data.dir, group.results.dir, rvVariable, rvNam
                     mgd=rename(mgd, c("Rx.Summary"="Medication"))
                 }
                 
-                print(head(mgd))
-                print(table(mgd[, c("Medication")]))
-                print(table(mgd[, c("Treatment")]))                
+                ## print(head(mgd))
+                ## print(table(mgd[, c("Medication")]))
+                ## print(table(mgd[, c("Treatment")]))                
                       
                 mgd=replaceNa(mgd, c("Medication", "Treatment"), inSubjectColumnName="subject", inGroupColumnName="Group", inReplaceNaWith=c("No Rx Info", "No Tx Info"))
                 ## stop()
@@ -444,10 +445,23 @@ generateGraphs <- function (group.data.dir, group.results.dir, rvVariable, rvNam
 
                 print(publicationTable)
                 ## stop("Check the publication data frame\n")
-                ##melted.mgd=melt(mgd,  id.vars=c("subject", "Group", "Gender", "DOB", "MRI", "Medication", "Treatment", rvVariable),
-                melted.mgd=melt(mgd,  id.vars=c("subject", "Group", "Treatment", "Medication", rvVariable),                        
-                    measure.vars=paste("Mean_", seq(1, clusterCount), sep=""),
-                    variable_name="cluster")
+                if ( grepl ("both.scaled", rvVariable, fixed=TRUE) ) {
+                    melted.mgd=melt(mgd,  id.vars=c("subject", "Group", "Treatment", "Medication", sub("both.scaled", "C.scaled", rvVariable, fixed=TRUE)),
+                        measure.vars=paste("Mean_", seq(1, clusterCount), sep=""),
+                        variable_name="cluster")
+                    graph.variable=sub("both.scaled", "C.scaled", rvVariable, fixed=TRUE)
+                } else if ( grepl ("both", rvVariable, fixed=TRUE) ) {
+                    melted.mgd=melt(mgd,  id.vars=c("subject", "Group", "Treatment", "Medication", sub("both", "C", rvVariable, fixed=TRUE)),
+                        measure.vars=paste("Mean_", seq(1, clusterCount), sep=""),
+                        variable_name="cluster")
+                    graph.variable=sub("both", "C", rvVariable, fixed=TRUE)
+                } else {
+                    ## melted.mgd=melt(mgd,  id.vars=c("subject", "Group", "Gender", "DOB", "MRI", "Medication", "Treatment", rvVariable),
+                    melted.mgd=melt(mgd,  id.vars=c("subject", "Group", rvVariable),                        
+                        measure.vars=paste("Mean_", seq(1, clusterCount), sep=""),
+                        variable_name="cluster")
+                    graph.variable=rvVariable
+                }
                 
                 melted.mgd$cluster=factor(melted.mgd$cluster,
                     levels=c(paste("Mean_", seq(1, clusterCount), sep="")),
@@ -459,7 +473,7 @@ generateGraphs <- function (group.data.dir, group.results.dir, rvVariable, rvNam
                 ## print(mgd)
                 ## stop("Check the melted mgd data frame\n")
                 
-                graphRegressions(melted.mgd, group.results.dir, rvVariable, rvName, seedName, indicate.treatments=FALSE)
+                graphRegressions(melted.mgd, group.results.dir, graph.variable, rvName, seedName, indicate.treatments=FALSE)
                 
             } ## end of if (clusterCount > 0 ) {
         } else {
@@ -497,11 +511,16 @@ graphRegressions <- function(melted.mgd, group.results.dir, rvVariable, rvName, 
             y.axis=rvVariable
             x.axis.label="RSFC (Z-score)"
             y.axis.label=rvName
+        } else if (grepl("both", group.results.dir)) {
+            x.axis="value"
+            y.axis=rvVariable
+            x.axis.label="RSFC (Z-score)"
+            y.axis.label=rvName
         } else {
-            x.axis=rvVariable
-            y.axis="value"
-            x.axis.label=rvName
-            y.axis.label="RSFC (Z-score)"
+            x.axis="value"
+            y.axis=rvVariable
+            x.axis.label="RSFC (Z-score)"
+            y.axis.label=rvName
         }
 
         ## cat("*** Medication levels and labels\n")
@@ -575,6 +594,7 @@ graphRegressions <- function(melted.mgd, group.results.dir, rvVariable, rvName, 
                                  
         
         ## print(graph)
+        ## stop()
         ggsave(imageFilename, graph, width=4, height=3, units="in")
         ## ggsave(imageFilename, graph, width=7, height=7, units="in")
         ## stop("Check graph\n")
@@ -604,10 +624,10 @@ if ( Sys.info()["sysname"] == "Darwin" ) {
     cat(paste("Sorry can't set data directories for this computer\n"))
 }
 
-data.dir=normalizePath(file.path(root.dir, "sanDiego/rsfcGraphAnalysis/data/"))
-admin.data.dir=normalizePath(file.path(data.dir, "admin"))
-config.data.dir=normalizePath(file.path(data.dir, "config"))
-seeds.data.dir=normalizePath(file.path(data.dir, "seeds"))
+data.dir=file.path(root.dir, "sanDiego/rsfcGraphAnalysis/data/")
+admin.data.dir=file.path(data.dir, "admin")
+config.data.dir=file.path(data.dir, "config")
+seeds.data.dir=file.path(data.dir, "seeds")
 
 
 ## this file stores all of the demographics of interest, such as ID, group, and drug(s) of choice
@@ -629,10 +649,13 @@ regressionVariables=list(
     ## list(variable="CDRS.t.score.scaled.diff",      name="Children's Depression\nRating Scale\n(Baseline to 3 Months Change)")#,
 
     ## list(variable="CDRS.t.score.scaled",           name="Children's Depression\nRating Scale (Baseline)"),
-    ## list(variable="CDRS.t.score",                  name="Children's Depression\nRating Scale (Baseline)")#,    
+    list(variable="CDRS.t.score",                     name="Children's Depression\nRating Scale (Baseline)")#,    
     
     ## list(variable="CDRS.t.score.scaled.diff",      name=expression(paste(Delta, " CDRS-R")))#,
-    list(variable="CDRS.t.score.rstandard",        name=expression("CDRS-R Residual"))#,    
+    ## list(variable="CDRS.t.score.rstandard",        name="CDRS-R Residual")#,
+
+    ## list(variable="CDRS.t.score.both.scaled",         name="Follow-up CDRS-R")#,    
+    ## list(variable="CDRS.t.score.both",                name="Follow-up CDRS-R")#,
     
     ## list(variable="CGAS.scaled.diff",              name="Children's Global Assessment Scale\n(Baseline to 3 Months Change)")
     
@@ -680,7 +703,6 @@ my_theme=
 ##seedFiles=file.path(config.data.dir, "juelich_amygdala_seeds_weights.txt")
 seedFiles=file.path(config.data.dir, "juelich_whole_amygdala_seeds.txt")
 
-baselineOnly=TRUE
 baselineOnly=FALSE
 
 for (seedFile in seedFiles) {
@@ -697,12 +719,9 @@ for (seedFile in seedFiles) {
         rvVariable=regressionVariables[[regressionVariableCount]]$variable
         rvName=regressionVariables[[regressionVariableCount]]$name
 
-        group.data.dir=file.path(data.dir, paste("Group.data", rvVariable, "withAandC", sep="."))
-        group.results.dir=file.path(data.dir, paste("Group.results", rvVariable, "withAandC.reversed", sep="."))
-
-        ## group.data.dir=file.path(data.dir, paste("Group.data", rvVariable, sep="."))
-        ## group.results.dir=file.path(data.dir, paste("Group.results", rvVariable, "reversed", sep="."))
-
+        group.data.dir=file.path(data.dir, paste("Group.data", rvVariable, sep="."))
+        group.results.dir=file.path(data.dir, paste("Group.results", rvVariable, sep="."))
+        
         publicationTableFilename=file.path(group.results.dir, paste("publicationTable", usedFwhm, groups, "csv", sep="."))
         ## if (file.exists(publicationTableFilename)) {
         ##     file.remove(publicationTableFilename)
