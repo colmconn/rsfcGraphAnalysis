@@ -124,16 +124,20 @@ fixSubjectOrderTable <- function (inSubjectOrderTable) {
 }
 
 printExcludedAndIncludedSubjects <- function(inData) {
-    if (any(is.na(inData))) {
+
+    variable.columns=-c(grep("Grp|subject", colnames(inData), fixed=FALSE))
+    nas = any(is.na(inData[, variable.columns]))
+    not.nas = ! nas
+    if (nas) {
         cat (sprintf("*** The following subjects have missing data for %s\n", rvVariable))
-        cat(c("---", as.vector(inData[is.na(inData[, rvVariable]), "subject"])), "\n")
-        cat(c("---", as.vector(inData[is.na(inData[, rvVariable]), "Grp"])), "\n")
-        cat("*** Total number of subjects to be excluded/included in the regression analysis:\n")
-        print(addmargins(table(ifelse(is.na(inData[, rvVariable]), "Exclude", "Inlcude"))))
+        cat(c("---", as.vector(inData[nas, "subject"])), "\n")
+        cat(c("---", as.vector(inData[nas, "Grp"])), "\n")
+        ## cat("*** Total number of subjects to be excluded/included in the regression analysis:\n")
+        ## print(addmargins(table(ifelse(is.na(inData[, rvVariable]), "Exclude", "Inlcude"))))
     }
     cat (sprintf("*** The following subjects will be included in the regression analysis\n"))
-    cat(c("***", as.vector(inData[! is.na(inData[, rvVariable]), "subject"])), "\n")
-    cat(c("***", as.vector(inData[! is.na(inData[, rvVariable]), "Grp"])), "\n")
+    cat(c("***", as.vector(inData[not.nas, "subject"])), "\n")
+    cat(c("***", as.vector(inData[not.nas, "Grp"])), "\n")
 }
 
 ## this is a very trimmed down version of the runRegression function
@@ -435,11 +439,18 @@ if (grepl("diff|rstandard", rvVariable, fixed=FALSE)) {
     ## the temporal difference regressions have seperate directories
     group.data.dir=file.path(data.dir, paste("Group.data", rvVariable, "withAandC", sep="."))
     group.results.dir=file.path(data.dir, paste("Group.results", rvVariable, "withAandC", sep="."))
+} else if (grepl("both", rvVariable, fixed=TRUE) ) {
+    group.data.dir=file.path(data.dir, paste("Group.data", rvVariable, sep="."))
+    group.results.dir=file.path(data.dir, paste("Group.results", rvVariable, sep="."))
+} else {
+    ## the temporal difference regressions have seperate directories
+    group.data.dir=file.path(data.dir, paste("Group.data", rvVariable, "withAandC", sep="."))
+    group.results.dir=file.path(data.dir, paste("Group.results", rvVariable, "withAandC", sep="."))
 }
 
 if (opt$cleaned) {
-    group.data.dir=normalizePath(file.path(data.dir, paste("Group.data", rvVariable, "withAandC", "cleaned", sep=".")))
-    group.results.dir=normalizePath(file.path(data.dir, paste("Group.results", rvVariable, "withAandC", "cleaned", sep=".")))
+    group.data.dir=file.path(data.dir, paste("Group.data", rvVariable, "withAandC", "cleaned", sep="."))
+    group.results.dir=file.path(data.dir, paste("Group.results", rvVariable, "withAandC", "cleaned", sep="."))
 }
 
 if ( ! dir.exists( group.results.dir) ) {
@@ -455,7 +466,7 @@ for (seed in seeds) {
     cat(sprintf("*** Running RLM for the %s seed of the %s group (%02d of %02d regressions)\n", seedName, groups, regressionCount, totalNumberOfRegressions))
     
     ## setup all the filenames
-    inputBucketFilename=paste("restingstate.bucket", groups, seedName,             "masked+tlrc.HEAD",  sep=".")
+    inputBucketFilename=paste("restingstate.bucket",                  groups, seedName,             "masked+tlrc.HEAD",  sep=".")
     if (opt$bootstrap) {
         outputBucketPrefix= paste("restingstate.reversed.formula",    groups, seedName, rvVariable, "booted.rlm.bucket", sep=".")
     } else {
@@ -503,8 +514,8 @@ for (seed in seeds) {
 
     mgd$subject=as.factor(mgd$subject)
     mgd=droplevels(mgd)
-    ## cat("mgd:\n")
-    ## print(mgd)
+    cat("mgd:\n")
+    print(head(mgd))
     
     mrData = inputBrik$brk
     dim(mrData) = c(dimX, dimY, dimZ, numberOfBriks)
@@ -513,23 +524,51 @@ for (seed in seeds) {
     
     ## set up the data frame with the dependant variables we will want
     ## to include in the regression formula
-    
-    model = data.frame(
-        as.vector(mgd[, "Grp"]),
-        as.vector(mgd[, "subject"]),            
-        as.vector(mgd[, rvVariable]),
-        as.vector(mgd[, "age.in.years"] - mean(mgd[, "age.in.years"]))
-    )
-    colnames(model) = c("Grp", "subject", rvVariable, "age.in.years")
-    
+
+    cat("*** Setting up model data frame\n")
+    if (grepl("both.scaled", rvVariable, fixed=TRUE)) {
+        formula.variable=sub(".both.scaled", "", rvVariable)
+
+        print( paste(formula.variable, c("A.scaled", "C.scaled"), sep="."))
+        model = data.frame(
+            as.vector(mgd[, "Grp"]),
+            as.vector(mgd[, "subject"]),            
+            as.vector(mgd[, c("age.in.years.scaled", paste(formula.variable, c("A.scaled", "C.scaled"), sep="."))]))
+        colnames(model) = c("Grp", "subject", "age.in.years.scaled", paste(formula.variable, c("A.scaled", "C.scaled"), sep="."))
+    } else if (grepl("both", rvVariable, fixed=TRUE)) {
+        formula.variable=sub(".both", "", rvVariable)
+        model = data.frame(
+            as.vector(mgd[, "Grp"]),
+            as.vector(mgd[, "subject"]),            
+            as.vector(mgd[, c("age.in.years", paste(formula.variable, c("A", "C"), sep="."))]))
+        colnames(model) = c("Grp", "subject", "age.in.years", paste(formula.variable, c("A", "C"), sep="."))
+    } else {
+        formula.variable=rvVariable
+        model = data.frame(
+            as.vector(mgd[, "Grp"]),
+            as.vector(mgd[, "subject"]),            
+            as.vector(mgd[, rvVariable]),
+            as.vector(mgd[, "age.in.years"]))
+        colnames(model) = c("Grp", "subject", paste(formula.variable, c("A.scaled", "C.scaled"), sep="."), "age.in.years")
+    }
+
     printExcludedAndIncludedSubjects(mgd)
-    ## print(head(model))
+    print(head(model))
     
     ## stop("Check model data frame\n")
     
     ## set up the formula for the model that we want to regress
     ## modelFormula  = as.formula(paste("mri ~", rvVariable, "+ age.in.years", sep=" "))
-    modelFormula  = as.formula(paste(rvVariable, "~", "mri + age.in.years", sep=" "))
+    cat("*** Setting up model formula\n")
+    if (grepl("both.scaled", rvVariable, fixed=TRUE)) {
+        modelFormula  = as.formula(
+            paste(paste(formula.variable, "C.scaled", sep="."), "~ mri + ", paste(formula.variable, "A.scaled", sep="."), "+ age.in.years.scaled", sep=" "))
+    } else if (grepl("both", rvVariable, fixed=TRUE)) {
+        modelFormula  = as.formula(
+            paste(paste(formula.variable, "C", sep="."), "~ mri + ", paste(formula.variable, "A", sep="."), "+ age.in.years", sep=" "))
+    } else {
+        modelFormula  = as.formula(paste(formula.variable, "~", "mri + age.in.years", sep=" "))
+    }
 
     cat("*** The model formula is: ")
     print(modelFormula)
