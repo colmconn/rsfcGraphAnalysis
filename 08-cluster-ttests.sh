@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#set -x 
+# set -x 
 
 # if ctrl-c is typed exit immediatly
 trap exit SIGHUP SIGINT SIGTERM
@@ -17,9 +17,9 @@ MDD_TISSUEPRIORS=$ROOT/tissuepriors
 scriptsDir=${ROOT}/scripts
 
 logDir=${DATA}/log
-GETOPT_OPTIONS=$( $GETOPT  -o "l:is:n:op:c:s:e" --longoptions "seedlist:,useInherentSmoothness,svc:,nn:,overwrite,pvalue:,cpvalue:,sided,cleaned" -n ${programName} -- "$@" )
+GETOPT_OPTIONS=$( $GETOPT  -o "l:is:n:op:c:s:ev" --longoptions "seedlist:,useInherentSmoothness,svc:,nn:,overwrite,pvalue:,cpvalue:,sided,cleaned,covaried" -n ${programName} -- "$@" )
 exitStatus=$?
-if [ $exitStatus != 0 ] ; then 
+if [[ $exitStatus != 0 ]] ; then 
     echo "Error with getopt. Terminating..." >&2 
     exit $exitStatus
 fi
@@ -51,11 +51,11 @@ while true ; do
 	-s|--sided )
 	    ss=$2
 	    if [[ $ss == "1sided" ]] ; then 
-		side="_1sided"
+		side="1sided"
 	    elif [[ $ss == "2sided" ]] ; then 
-		side="_2sided"
+		side="2sided"
 	    elif [[ $ss == "bisided" ]] ; then 
-		side="_bisided"
+		side="bisided"
 	    else
 		echo "Unknown argument provided to -s or --sided. Valid values are 1sided, 2sided, bisided. Defaulting to 1sided"
 		side="_1sided"		
@@ -66,6 +66,8 @@ while true ; do
 	    shift ;;
 	-e|--cleaned)
 	    cleaned=1; shift ;;		
+	-v|--covaried)
+	    covaried=1; shift ;;		
 	--) 
 	    shift ; break ;;
 
@@ -86,6 +88,21 @@ function extractTStatpars {
     echo $( echo $c | tr "," " " )
 }
 
+function makeClustSimFilePrefix {
+    local group=$1
+    local fwhm="$2"
+
+    local pvalue="$3"
+    local cpvalue="$4"
+
+    if [[ -z "$pvalue" ]] || [[ -z "$cpvalue" ]] ; then 
+	prefix="CStemp.fwhm${usedFwhm}.${group}"
+    else
+	prefix=CStemp.fwhm${usedFwhm}.pvalue.$pvalue.cPvalue.$cpvalue
+    fi
+    echo $prefix
+}
+
 function extractNVoxels {
     local nn=$1
     # corrected p-value
@@ -93,6 +110,7 @@ function extractNVoxels {
     ## voxelwise p-value
     local vPValue=$3
     local clustsimPrefix=$4
+    local side="$5"
 
     #0.100  0.090  0.080  0.070  0.060  0.050  0.040  0.030  0.020  0.010
     # if using the default whole brain p values used by 3dClustSim
@@ -120,17 +138,15 @@ function extractNVoxels {
     # 	pvalueColumn=11
     # fi
 
-    if [[ ! -f $clustsimPrefix.NN$nn$side.1D ]] ; then
-	echo "$clustsimPrefix.NN$nn.1D doesn't exist. Cannot continue, exiting."
-	exit
-    fi
     pvalueColumn=2
-    nVoxels=$( cat $clustsimPrefix.NN$nn$side.1D | sed '/^#/d' | grep "^ $vPValue" | awk "{print \$$pvalueColumn}" )
-
-    echo $nVoxels
+    if [[ "X$pvalueColumn" == "X" ]] ; then
+	nVoxels="NA"
+    else
+	nVoxels=$( cat $clustsimPrefix.NN${nn}_${side}.1D | sed '/^#/d' | grep "^ $vPValue" | awk "{print \$$pvalueColumn}" )
+    fi
     
+    echo $nVoxels
 }
-
 
 if [ ! -f $seedList ] || [ "x$seedList" == "x" ] ; then
     echo "*** ERROR: The seed list file does not exit or was not provided. Exiting"
@@ -169,6 +185,11 @@ if [[ $cleaned -eq 1 ]] ; then
 
     GROUP_DATA=${GROUP_DATA}${cleanedSuffix}
     GROUP_RESULTS=${GROUP_RESULTS}${cleanedSuffix}
+fi
+
+if [[ $covaried -eq 1 ]] ; then
+    echo "*** Will use covaried versions of the data files"
+    covariedSuffix=".covaried"
 fi
 
 echo "*** Will group results files in $GROUP_RESULTS"
@@ -216,12 +237,10 @@ groups="mddAndCtrl"
 csvFile=parameters.fwhm${usedFwhm}.$groups.csv
 
 if [[ $overwrite -eq 1 ]] || [[ ! -f $csvFile ]] ; then 
-    echo "seed,fwhm,tLabel,tValueBrikId,tThreshold,rmm,nVoxels,df,pValue,cPvalue,nClusters,bucketFile" > $csvFile
+    echo "analysis,seed,fwhm,tLabel,tValueBrikId,tThreshold,rmm,nVoxels,df,pValue,cPvalue,nClusters,bucketFile" > $csvFile
 fi
 
-tLabel="SetA-SetB_Tstat"
-
-## for use with 3dClustSim
+tLabelPrefix="MDD-NCL"
 
 for seed in $seeds ; do
 
@@ -232,31 +251,42 @@ for seed in $seeds ; do
 	seedName=${seedName%%+*}
     fi
 
-    cstempPrefix=CStemp.fwhm${usedFwhm}.pvalue.$pValue.cPvalue.$cPvalue
-    if [ ! -f ${cstempPrefix}.NN1$side.1D ] ; then
+    ## cstempPrefix=CStemp.fwhm${usedFwhm}.pvalue.$pValue.cPvalue.$cPvalue
+    cstempPrefix=$( makeClustSimFilePrefix $groups $usedFwhm $pValue $cPvalue )
+    if [ ! -f ${cstempPrefix}.NN${NN}_${side}.1D ] ; then
 	echo "*** Running 3dClustSim"
+	echo "*** Output will be saved to files begining with: $cstempPrefix"
 	#export OMP_NUM_THREADS=10
 	if [[ -f $GROUP_RESULTS/mask.grey.$groups.union.masked+tlrc.HEAD ]] ; then 
-	    3dClustSim -mask mask.grey.$groups.union.masked+tlrc.HEAD -fwhm ${usedFwhm} -niml -both -prefix ${cstempPrefix} -pthr $pValue -athr $cPvalue
+	    3dClustSim -mask mask.grey.$groups.union.masked+tlrc.HEAD -fwhm ${usedFwhm} -both -prefix ${cstempPrefix} -pthr $pValue -athr $cPvalue
 	else 
-	    3dClustSim -mask $MDD_STANDARD/MNI152_T1_3mm_brain_mask.nii.gz  -fwhm ${usedFwhm} -niml -both -prefix ${cstempPrefix} -pthr $pValue -athr $cPvalue
+	    3dClustSim -mask $MDD_STANDARD/MNI152_T1_3mm_brain_mask.nii.gz  -fwhm ${usedFwhm} -both -prefix ${cstempPrefix} -pthr $pValue -athr $cPvalue
 	fi
+	mv -f 3dClustSim.cmd ${cstempPrefix}.3dClustSim.cmd
     fi
-	
-    
 
     bucketFilename=$GROUP_DATA/restingstate.bucket.$groups.${seedName}.masked+tlrc
-    tTestFile=ttest.${seedName}+tlrc
+    tTestFile=ttest.${groups}.${seedName}${covariedSuffix}+tlrc
+    
+    addStatTableCmd="$( cat ${cstempPrefix}.3dClustSim.cmd ) $tTestFile"
+    #echo "*** Statistic table addition command is: $addStatTableCmd"
+    #eval "$addStatTableCmd"
+    
+    tValueBrikId=$( 3dinfo -label2index "${tLabelPrefix}_Tstat" $tTestFile 2> /dev/null )
+    tContrastBrikId=$( 3dinfo -label2index "${tLabelPrefix}_mean" $tTestFile 2> /dev/null )    
+    ## tContrastBrikId=$( expr $tValueBrikId - 1 )
 
-    tValueBrikId=$( 3dinfo -label2index $tLabel $tTestFile 2> /dev/null )
-    tContrastBrikId=$( expr $tValueBrikId - 1 )
-
-    nVoxels=$( extractNVoxels $NN $cPvalue $pValue ${cstempPrefix} ) 
-    df=$( extractTStatpars "$tTestFile" "$tLabel" )
+    nVoxels=$( extractNVoxels $NN $cPvalue $pValue ${cstempPrefix} $side )
+    if [[ "$nVoxels" == "NA" ]] ; then
+	echo "*** Couldn't get the correct number of voxels to go with pvalue=$pValue and corrected pvalue=$cPvalue"
+	echo "*** You may need to pad these values with zeros to ensure you match the correct row and column in $cstempPrefix.NN${NN}_${side}.1D"
+	exit
+    fi
+    df=$( extractTStatpars "$tTestFile" "${tLabelPrefix}_Tstat" )
 
     tThreshold=$( cdf -p2t fitt $pValue $df | sed 's/t = //' )
     echo "### fwhm = ${usedFwhm}"
-    echo "### tLabel = $tLabel"
+    echo "### tLabelPrefix = $tLabelPrefix"
     echo "### tContrastBrikId = $tContrastBrikId"
     echo "### tValueBrikId = $tValueBrikId"
     echo "### tThreshold = $tThreshold"
@@ -280,7 +310,7 @@ for seed in $seeds ; do
     
     3dclust -1Dformat -nosum -dxyz=1 $rmm $nVoxels clorder.$suffix+tlrc.HEAD > clust.$suffix.txt
 
-    if [ -f clorder.$suffix+tlrc.HEAD ] ; then 
+    if [[ -f clorder.$suffix+tlrc.HEAD ]] ; then 
 
 	3dcalc -a clorder.${suffix}+tlrc.HEAD -b ${tTestFile}\[$tValueBrikId\] -expr "step(a)*b" -prefix clust.$suffix
 	
@@ -291,28 +321,13 @@ for seed in $seeds ; do
 
 	3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD ${tTestFile}\[$tContrastBrikId\]      > roiStats.$suffix.averageContrastValue.txt
 	3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD ${tTestFile}\[$tValueBrikId\]         > roiStats.$suffix.averageTValue.txt
-
-	threedrefitcmd="$( cat 3dClustSim.cmd )"
-	eval "$threedrefitcmd $tTestFile"
 	
-	# 3drefit \
-	#     -atrstring AFNI_CLUSTSIM_NN1  file:${cstempPrefix}.NN1.niml \
-	#     -atrstring AFNI_CLUSTSIM_MASK file:${cstempPrefix}.mask \
-	#     -atrstring AFNI_CLUSTSIM_NN2  file:${cstempPrefix}.NN2.niml \
-	#     -atrstring AFNI_CLUSTSIM_NN3  file:${cstempPrefix}.NN3.niml \
-	#     clust.$suffix+tlrc.HEAD
-	# 3drefit \
-	#     -atrstring AFNI_CLUSTSIM_NN1  file:${cstempPrefix}.NN1.niml \
-	#     -atrstring AFNI_CLUSTSIM_MASK file:${cstempPrefix}.mask \
-	#     -atrstring AFNI_CLUSTSIM_NN2  file:${cstempPrefix}.NN2.niml \
-	#     -atrstring AFNI_CLUSTSIM_NN3  file:${cstempPrefix}.NN3.niml \
-	#     clorder.$suffix+tlrc.HEAD
 	3drefit -cmap INT_CMAP clorder.$suffix+tlrc.HEAD
     else
 	nClusters=0
 	echo "*** WARNING No clusters found!"
     fi
-    echo "$seedName,${usedFwhm},$tLabel,$tValueBrikId,$tThreshold,$rmm,$nVoxels,$df,$pValue,$cPvalue,$nClusters,$tTestFile" >> $csvFile
+    echo "NA,$seedName,${usedFwhm},$tLabel,$tValueBrikId,$tThreshold,$rmm,$nVoxels,$df,$pValue,$cPvalue,$nClusters,$tTestFile" >> $csvFile
 done
 
 cd $scriptsDir
