@@ -404,7 +404,14 @@ if (interactive()) {
     ##     "-c", "new.mdd.CDRS.t.score.scaled.diff.change.score.csv",
     ##     "-v", "CDRS.t.score.scaled.diff",
     ##     "-s", "juelich_amygdala_seeds_weights.txt")
-    ## opt = getopt(spec, opt=args)
+
+
+    args=c(
+        "-c", "new.mdd.CDRS.t.score.both.short.scores.csv",
+        "-v", "CDRS.t.score.both.short",
+        "-s", "juelich_whole_amygdala_seeds.txt",
+        "-p") 
+    opt = getopt(spec, opt=args)
 } else {
     opt = getopt(spec)
 }
@@ -452,6 +459,9 @@ if (opt$cleaned) {
     group.data.dir=file.path(data.dir, paste("Group.data", rvVariable, "withAandC", "cleaned", sep="."))
     group.results.dir=file.path(data.dir, paste("Group.results", rvVariable, "withAandC", "cleaned", sep="."))
 }
+
+cat("*** Loading group data from:", group.data.dir, "\n")
+cat("*** Saving  group data to  :", group.results.dir, "\n")
 
 if ( ! dir.exists( group.results.dir) ) {
     stop(sprintf("*** The group results directory (%s) does not exist. Cannot continue\n", group.results.dir))
@@ -536,7 +546,7 @@ for (seed in seeds) {
             as.vector(mgd[, c("age.in.years.scaled", paste(formula.variable, c("A.scaled", "C.scaled"), sep="."))]))
         colnames(model) = c("Grp", "subject", "age.in.years.scaled", paste(formula.variable, c("A.scaled", "C.scaled"), sep="."))
     } else if (grepl("both", rvVariable, fixed=TRUE)) {
-        formula.variable=sub(".both", "", rvVariable)
+        formula.variable=sub("\\.both(\\.short)?", "", rvVariable)
         model = data.frame(
             as.vector(mgd[, "Grp"]),
             as.vector(mgd[, "subject"]),            
