@@ -535,7 +535,7 @@ graphRegressions <- function(melted.mgd, group.results.dir, rvVariable, rvName, 
         ## print(levels(melted.mgd$Treatment))
         ## print(sub("Tx", "Treatment", sub("Info", "Information", levels(melted.mgd$Treatment), fixed=TRUE), fixed=TRUE))
 
-        graph=ggplot(ss, aes_string(x=x.axis, y=y.axis)) +
+        graph=ggplot(ss, aes_string(x=x.axis, y=y.axis, label="subject")) +
             stat_smooth(method="rlm", se=FALSE, color="black") +
                 labs(title = substituteShortLabels(level), x=x.axis.label, y=y.axis.label) +
                     my_theme
