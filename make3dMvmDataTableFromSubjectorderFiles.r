@@ -1,6 +1,9 @@
 rm(list=ls())
 graphics.off()
 
+## for the some package
+library(car)
+
 ## Reads the seed file and does the (crude) equivalent of BASH variable
 ## substitution
 readSeedsFile <- function (inSeedsFile) {
@@ -104,6 +107,10 @@ demographics=readCsvFile(demographicsFilename)
 wasiFilename=file.path(admin.data.dir, "WASI.csv")
 wasi=readCsvFile(wasiFilename, "SubID")
 
+
+e.norm.filename=file.path(group.data.dir, "restingstate.mddAndCtrl.motion.enorm.csv")
+enorm=fixSubjectOrderTable(readCsvFile(e.norm.filename, inSubjectColumnName="subject"))
+
 ## seeds=readSeedsFile(file.path(config.data.dir, "juelich_amygdala_seeds_weights.txt"))
 seeds=readSeedsFile(file.path(config.data.dir, "juelich_whole_amygdala_seeds.txt"))
 
@@ -125,7 +132,8 @@ for (seed in seeds) {
 
     mgd=cbind(subjectOrder, bucketList,
         demographics[match(subjectOrder$subject, demographics$ID), c("Grp", "Gender", "DOB", "MRI")],
-        wasi        [match(subjectOrder$subject, wasi$SubID),      c("Full")])
+        wasi        [match(subjectOrder$subject, wasi$SubID),      c("Full")],
+        enorm       [match(subjectOrder$subject, enorm$subject),   c("enorm")])
      ## wasi        [match(subjectOrder$subject, wasi$SubID),      c("Verbal", "Performance", "Full")])    
 
     if (any(mgd$subject=="378"))
@@ -133,26 +141,28 @@ for (seed in seeds) {
 
     mgd$subject=paste(mgd$subject, "A", sep="_")
     mgd=droplevels(mgd)        
-    colnames(mgd)=c("Subj", "InputFile", "Group", "Gender", "DOB", "MRI", "Full")
+    colnames(mgd)=c("Subj", "InputFile", "Group", "Gender", "DOB", "MRI", "Full", "enorm")
     
     mgd=fixDates(mgd)
     mgd=computeAge(mgd)
-    colnames(mgd)=c("Subj", "InputFile", "Group", "Gender", "DOB", "MRI", "Full", "age")    
-    print(head(mgd))
+    colnames(mgd)=c("Subj", "InputFile", "Group", "Gender", "DOB", "MRI", "Full", "enorm", "age")    
 
-    ## mgd[, c("age", "Full")] = scale(mgd[, c("age", "Full")], center=TRUE, scale=FALSE)
+    mgd[, c("age", "Full", "enorm")] = scale(mgd[, c("age", "Full", "enorm")], center=TRUE, scale=FALSE)
+
     ## don't scale the Full IQ as this differs between groups
-    mgd[, c("age")] = scale(mgd[, c("age")], center=TRUE, scale=FALSE)
+    ## mgd[, c("age")] = scale(mgd[, c("age")], center=TRUE, scale=FALSE)
 
     ## tapply(mgd$Full, list(mgd$Group), mean) # get the means of the
     ## groups then repeat each as manu times as there members in each
     ## group and provide the resultant vector of repeated means to
     ## scale to subtract from each original value. The results is Full
     ## IQ centered within group
-    mgd[, c("Full")] = mgd[, c("Full")] - rep(tapply(mgd$Full, list(mgd$Group), mean), table(mgd$Group))
+    ## mgd[, c("Full")] = mgd[, c("Full")] - rep(tapply(mgd$Full, list(mgd$Group), mean), table(mgd$Group))
+
+    print(some(mgd))
     
     mgd$InputFile=sub("z-score", "z-score.masked", mgd$InputFile, fixed=TRUE)
-    
+
     ## reorder the columns to suite 3dMVM
     ss=mgd[, c("Subj", "Group", "Gender", "Full", "InputFile")]
     dataTableFilename=file.path(group.data.dir, paste("dataTable", grouping, "group", "and", "gender", seedName, "txt", sep="."))
