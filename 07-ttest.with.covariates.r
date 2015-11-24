@@ -105,18 +105,21 @@ demographics=readCsvFile(demographicsFilename)
 wasiFilename=file.path(admin.data.dir, "WASI.csv")
 wasi=readCsvFile(wasiFilename, inSubjectColumnName="SubID")
 
-seeds=readSeedsFile(file.path(config.data.dir, "juelich_amygdala_seeds_weights.txt"))
+## seeds=readSeedsFile(file.path(config.data.dir, "juelich_amygdala_seeds_weights.txt"))
+
+seeds=readSeedsFile(file.path(config.data.dir, "juelich_whole_amygdala_seeds.txt"))
 
 ## wasi.column.names=c("Verbal", "Performance", "Full")
 ## only use the WASI Full score as a covariate as perfromance and
 ## verbal are highly correlated
 wasi.column.names=c("Full")
 
-covariate.column.names=c("age.in.years")
+## covariate.column.names=c("age.in.years")
+covariate.column.names=c("Full")
 
 ## atAndNat = suicide attempters and non-attempters
-## grouping="mddAndCtrl"
-grouping="atAndNat"
+grouping="mddAndCtrl"
+## grouping="atAndNat"
 
 for (seed in seeds) {
     seedName=getSeedName(seed)
@@ -213,7 +216,6 @@ for (seed in seeds) {
     ## pick those columns that we want to correct for in the t-tests
     mgd=mgd[, c("subject", "Group", covariate.column.names, "InputFile")]
 
-
     covariates.filename=file.path(group.data.dir, paste("3dttest.covariates", grouping, seedName, "txt", sep="."))
     cat("*** Writing covariates file to:", covariates.filename, "\n")
     ## the ordering of the columns in the the write command below is
@@ -228,11 +230,13 @@ for (seed in seeds) {
     mask=sprintf("mask.grey.%s.union.masked+tlrc.HEAD", "mddAndCtrl")    
     prefix=sprintf("ttest.%s.%s.covaried", grouping, seedName)
 
-    setA.group="Attempter"
+    ## setA.group="Attempter"
+    setA.group=levels(mgd$Group)[1]
     setA.files=paste(mgd[mgd$Group==setA.group, "InputFile"], collapse=" \\\n")
     setA.labels.and.files = paste(apply(mgd[mgd$Group==setA.group, c("subject", "InputFile")], 1, paste, collapse=" "), collapse=" \\\n")
     
-    setB.group="Non-attempter"
+    ## setB.group="Non-attempter"
+    setB.group=levels(mgd$Group)[2]
     setB.files=paste(mgd[mgd$Group==setB.group, "InputFile"], collapse=" \\\n")
     setB.labels.and.files = paste(apply(mgd[mgd$Group==setB.group, c("subject", "InputFile")], 1, paste, collapse=" "), collapse=" \\\n")
     
