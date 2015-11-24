@@ -49,6 +49,9 @@ cleanedSuffix=""
 
 regressionVariables="CDRS.t.score"
 
+# regressionVariables="CDRS.t.score.both.scaled"
+#regressionVariables="CDRS.t.score.both"
+
 task="restingstate"
 
 groups="mddOnly"
@@ -267,10 +270,13 @@ for regressionVariable in $regressionVariables ; do
     # GROUP_RESULTS=$DATA/Group.results.$regressionVariable.withAandC${cleanedSuffix}.reversed
 
     GROUP_DATA=$DATA/Group.data.$regressionVariable${cleanedSuffix}
-    GROUP_RESULTS=$DATA/Group.results.$regressionVariable${cleanedSuffix}.reversed
+    # GROUP_RESULTS=$DATA/Group.results.$regressionVariable${cleanedSuffix}.reversed
+    GROUP_RESULTS=$DATA/Group.results.$regressionVariable${cleanedSuffix}    
 
     #GROUP_RESULTS=$DATA/Group.results.$regressionVariable.withAandC${cleanedSuffix}
 
+    ## regressionVariable=$( echo $regressionVariable | sed "s/.withAandC.formula//" ) 
+    
     echo "*** Will write group results files in $GROUP_RESULTS"
 
     if [[ ! -d $GROUP_RESULTS ]] ; then
