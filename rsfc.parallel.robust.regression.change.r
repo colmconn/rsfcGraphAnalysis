@@ -4,7 +4,6 @@ rm(list=ls())
 
 library(MASS)
 library(getopt)
-## library(compiler)
 
 source("scoreMasc.r")
 
@@ -157,8 +156,6 @@ bootRegression <- function(inData, inIndices, inModelFormula, inMaxIt=50, inNumb
     }
 }
 
-## bootRegression <- cmpfun(bootRegression.slow)
-
 runRegression <- function (inData, inNumberOfStatsBriks, inModel, inModelFormula, inMaxIt=50, inBoot=FALSE, inR=25, inBootstrapStatsStartAt=NA) {
     ## cat("inNumberOfStatsBriks =>", inNumberOfStatsBriks, "\n")
     ## cat("inBootstrapStatsStartAt =>", inBootstrapStatsStartAt, "\n")
@@ -250,8 +247,6 @@ runRegression <- function (inData, inNumberOfStatsBriks, inModel, inModelFormula
     ## cat(".")
     return(out.stats)
 }
-
-## runRegression <- cmpfun(runRegression.slow)
 
 readCsvFile <- function (inFilename, inSubjectColumnName="ID") {
 
@@ -661,11 +656,6 @@ for (seed in seeds[1]) {
         clusterEvalQ(cluster, library(MASS))
         clusterEvalQ(cluster, library(boot))
         clusterSetupRNG(cluster, seed=seed.value)
-        ## clusterEvalQ(cluster, library(compiler))        
-        ## clusterEvalQ(cluster, enableJIT(3))     
-        ## export the bootRegression function so that it can be sees
-        ## on slave nodes in the cluster
-        ## clusterExport(cluster, c("bootRegression", "bootRegression.slow"))
         
         ##function (inData, inNumberOfStatsBriks, inModel, inModelFormula, inMaxIt=50, inBoot=FALSE, inR=25, inBootstrapStatsStartAt=NA) {
         for ( kk in 1:dimZ) {
