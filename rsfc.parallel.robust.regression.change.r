@@ -18,6 +18,9 @@ if ( ! is.na(AFNI_R_DIR) ) {
     stop("Couldn't find AFNI_R_DIR in environment. This points to the location from which to load functions for reading and writing AFNI BRIKS. Stopping!")
 }
 
+seed.value=1234567
+set.seed(seed.value)
+
 ##########################################################################################################################################################################
 ### START OF FUNCTIONS ###################################################################################################################################################
 ##########################################################################################################################################################################
@@ -26,7 +29,7 @@ if ( ! is.na(AFNI_R_DIR) ) {
 ## this function takes the row and column names from an rlm
 ## coefficient matrix and combines these (along row) to get a list of
 ## labels for later use as labels to the 3drefit command so the briks
-## in the bucket are correctly labeled. Spaces are replaced with . and
+# in the bucket are correctly labeled. Spaces are replaced with . and
 ## ( or ) are deleted.
 makeBrikLabels <- function (inRlmCoef, inBoot=FALSE) {
     rns=rownames(inRlmCoef)
@@ -157,7 +160,9 @@ bootRegression <- function(inData, inIndices, inModelFormula, inMaxIt=50, inNumb
 ## bootRegression <- cmpfun(bootRegression.slow)
 
 runRegression <- function (inData, inNumberOfStatsBriks, inModel, inModelFormula, inMaxIt=50, inBoot=FALSE, inR=25, inBootstrapStatsStartAt=NA) {
-    outStats <- vector(mode="numeric", length=inNumberOfStatsBriks)
+    ## cat("inNumberOfStatsBriks =>", inNumberOfStatsBriks, "\n")
+    ## cat("inBootstrapStatsStartAt =>", inBootstrapStatsStartAt, "\n")
+    out.stats <- vector(mode="numeric", length=inNumberOfStatsBriks)
     if ( ! all(inData == 0 ) ) {
 
         ## if inData is all zero then we are in a portion of the masked
@@ -169,7 +174,8 @@ runRegression <- function (inData, inNumberOfStatsBriks, inModel, inModelFormula
         
         myrlm <- rlm(inModelFormula, data = inModel, maxit=inMaxIt)
         
-        outStats[1] = mean(inModel$mri)
+        out.stats[1] = mean(inModel$mri)
+        
         ## print(summary(myrlm))
         ## > coef(summary(model))
         ## Value Std. Error    t value
@@ -178,69 +184,71 @@ runRegression <- function (inData, inNumberOfStatsBriks, inModel, inModelFormula
         ## Educ         0.71157766  0.5370092  1.3250753
         ## as.vector(t(coef(summary(model))))
         ## [1] 89.09177404  8.02218304 11.10567705  0.04087267  0.11462344  0.35658210  0.71157766  0.53700922  1.32507531
-        ##outStats[2:length(outStats)]=as.vector(t(coef(summary(myrlm))))
+
+        model.coefficients=as.vector(t(coef(summary(myrlm))))
+        ## cat ("\nRLM Indices: ", 2:(inBootstrapStatsStartAt-1), "\n")
+        ## cat ("model.coefficients: ", model.coefficients, "\n")
+        ## cat ("Length of stats vector is", length(model.coefficients), "\n")
+        out.stats[2:(inBootstrapStatsStartAt-1)]=model.coefficients
 
         if (inBoot) {
             if (is.na(inBootstrapStatsStartAt)) {
                 stop("***ERROR in runRegression: inBootstrapStatsStartAt has not been set. It is currently NA. Cannot continue. Stopping\n")
             }
 
-            ## cat ("\nRLM Indices: ", 2:(inBootstrapStatsStartAt-1), "\n")
-            ## cat ("coef(summary(myrlm)): ", as.vector(t(coef(summary(myrlm)))), "\n")
-            ## cat ("Length of stats vector is", length(as.vector(t(coef(summary(myrlm))))), "\n")
-            ## cat ("inBootstrapStatsStartAt is ", inBootstrapStatsStartAt, "\n")
-
-            outStats[2:(inBootstrapStatsStartAt-1)]=as.vector(t(coef(summary(myrlm))))
-
-            ## cat ("inside inBoot outStats is: ", outStats, "\n")
+            ## cat ("inside inBoot out.stats is: ", out.stats, "\n")
             ## cat ("number of stats briks should be: ", length(2:(inBootstrapStatsStartAt-1)), "\n")
             
-            bootStats=boot(inModel, bootRegression, R=inR, inModelFormula=inModelFormula, inMaxIt=inMaxIt, inNumberOfStatsBriks=length(2:(inBootstrapStatsStartAt-1)))
-            ## cat("bootStats is\n")
-            ## print(bootStats)
-            ## print(class(bootStats))
-            ## print(is.vector(bootStats))
-            if (is(bootStats, "boot")) {
-                bootBias=apply(bootStats$t, 2, mean) - bootStats$t0
+            boot.stats=boot(inModel, bootRegression, R=inR, inModelFormula=inModelFormula, inMaxIt=inMaxIt, inNumberOfStatsBriks=length(2:(inBootstrapStatsStartAt-1)))
+            ## cat("boot.stats is\n")
+            ## print(boot.stats)
+            ## print(class(boot.stats))
+            ## print(is.vector(boot.stats))
+            if (is(boot.stats, "boot")) {
+                boot.bias=apply(boot.stats$t, 2, mean) - boot.stats$t0
                 ## these are vectors with as many columns as there are terms in
                 ## the regression model. Don't forget to include the intercept
                 ## when you're trying to mentalize this
-                bootSeCoeff=apply(bootStats$t, 2, sd)
-                bootTCoeff=bootStats$t0 / bootSeCoeff
-                ## bootCi=matrix(0, nrow=length(bootTCoeff), ncol=2)
+                boot.se.coeff=apply(boot.stats$t, 2, sd)
+                boot.t.coeff=boot.stats$t0 / boot.se.coeff
 
-                ## cat("1 bootBias is",    bootBias, "\n")
-                ## cat("2 bootSdCoeff is", bootSdCoeff, "\n")
-                ## cat("3 bootTCoeff is",  bootTCoeff, "\n")
-                ## cat("4 bootCi is:",     bootCi, "\n")                                
-                ## Outputbootstrapstats=vector(mode="numeric", length=length(bootTCoeff) * length(bootstrappingBrikLabelSuffxes))
-                outputBootstrapStats=c()
-                for (termIndex in seq(1, length(bootTCoeff))) {
+                ## cat("boot.bias is",     boot.bias, "\n")
+                ## cat("boot.se.coeff is", boot.se.coeff, "\n")
+                ## cat("boot.t.coeff is",  boot.t.coeff, "\n")
+
+                start.at=inBootstrapStatsStartAt
+                for (term.index in seq(1, length(boot.t.coeff))) {
                     ## the normal element of the CI value contains 3 elements: 1) the CI
                     ## level (in this case 0.95), 2) the lower bound on the CI, 3) the
                     ## upper bound on the CI
-                    ci=boot.ci(bootStats, conf = c(0.95), type = c("norm"), index = termIndex)$normal[2:3]
-                    ## cat("5 ci is:", ci, "\n")
-
-                    ## bootCi[termIndex, ]=ci
-
-                    ## cat("6 bootCi is", bootCi, "\n")                                                    
-                    ## outputBootstrapStats=c(outputBootstrapStats, bootBias[termIndex], bootTCoeff[termIndex], bootCi[termIndex, ])
-                    outputBootstrapStats=c(outputBootstrapStats, bootBias[termIndex], bootTCoeff[termIndex], ci)                    
-                    ## cat ("7 outputBootstrapStats now: ", outputBootstrapStats, "\n")
+                    ci=boot.ci(boot.stats, conf = c(0.95), type = c("norm"), index = term.index)$normal[2:3]
+                    ## cat("ci for", names(boot.stats$t0)[term.index], "is:", ci, "\n")
+                    out.stats[start.at:(start.at+3)] = c(boot.bias[term.index], boot.t.coeff[term.index], ci)
+                    start.at=start.at+4
                 }
-                outStats[inBootstrapStatsStartAt:inNumberOfStatsBriks]=outputBootstrapStats
             }
         } ## end of if (inBoot) {
         else {
-            outStats[2:length(outStats)]=as.vector(t(coef(summary(myrlm))))
+            out.stats[2:(length(model.coefficients)+1)]=model.coefficients
         }
     } ## end of if ( ! all(inData == 0 ) ) {
-    ## cat ("8 outStats is: ", outStats, "\n")  
-    ## if ( ! all(outStats == 0 ) )
-    ##     stop()
+    ## cat ("out.stats is: ", out.stats, "\n")
 
-    return(outStats)
+    ## longest.label=max(sapply(outputStatsBrikLabels, nchar))
+    ## cc=cbind (outputStatsBrikLabels, out.stats)
+    ## cc=cbind(seq(1:dim(cc)[1]), cc)
+    ## cat(apply(cc, 1,
+    ##           function(xx) {
+    ##               sprintf("%02d: %s => %0.5f",
+    ##                       as.integer(xx[1]),
+    ##                       format(xx[2], justify="left", width=longest.label),
+    ##                       as.numeric(xx[3]), 5)
+    ##           } ), sep="\n")
+    
+    ## if ( ! all(out.stats == 0 ) )
+    ##     stop()
+    ## cat(".")
+    return(out.stats)
 }
 
 ## runRegression <- cmpfun(runRegression.slow)
@@ -349,11 +357,11 @@ printOptionsSummary <- function () {
 
 if ( Sys.info()["sysname"] == "Darwin" ) {
     root.dir="/Volumes/data"
-    ncpus=as.integer(strsplit(system("sysctl hw.ncpu", intern=T), ' ')[[1]][2])
+    ## ncpus=as.integer(strsplit(system("sysctl hw.ncpu", intern=T), ' ')[[1]][2])
     cat(paste("*** Found" , ncpus, ifelse(ncpus == 1, "cpu", "cpus"), "\n"))
 } else if ( Sys.info()["sysname"] == "Linux" ) {
     root.dir="/data"
-    ncpus=8
+    ncpus=1
     cat(paste("*** Found" , ncpus, ifelse(ncpus == 1, "cpu", "cpus"), "\n"))    
 } else {
     stop(paste("Sorry can't set data directories for this computer\n"))
@@ -375,7 +383,7 @@ verbose=FALSE
 ## this indicates whether bootstrapping should be performed
 ## doBootstrapping=FALSE
 
-bootstrappingBrikLabelSuffxes=c("bias", "t.value", "ciLower", "ciUpper")
+bootstrappingBrikLabelSuffxes=c("bias", "booted.t.value", "ciLower", "ciUpper")
 
 ################################################################################
 NO_ARGUMENT="0"
@@ -407,10 +415,10 @@ if (interactive()) {
 
 
     args=c(
+        "-b", "-r", "100",
         "-c", "new.mdd.CDRS.t.score.both.short.scores.csv",
         "-v", "CDRS.t.score.both.short",
-        "-s", "juelich_whole_amygdala_seeds.txt",
-        "-p") 
+        "-s", "juelich_whole_amygdala_seeds.txt") 
     opt = getopt(spec, opt=args)
 } else {
     opt = getopt(spec)
@@ -420,8 +428,8 @@ opt=checkCommandLineArguments(opt)
 
 ## flag to indincate whether a progress bar should be printed or one
 ## line per slice if no progress bar is to be used
-useProgressBar=interactive() || opt$progress
-
+## useProgressBar=interactive() || opt$progress
+useProgressBar =  opt$progress
 change.score.filename=file.path(admin.data.dir, opt$change)
 seeds.filename=file.path(config.data.dir, opt$seeds)
 
@@ -469,7 +477,7 @@ if ( ! dir.exists( group.results.dir) ) {
 ## turn on compilation of all loops before they are run for the first time
 ## enableJIT(3)
 
-for (seed in seeds) {
+for (seed in seeds[1]) {
     seedName=getSeedName(seed)
     
     cat("####################################################################################################\n")
@@ -614,29 +622,30 @@ for (seed in seeds) {
     ## the makeBrikLabels
     ## function does not include the mean of the fMRI at the start of
     ## the list of labels so include it here with the c()
-    d=makeBrikLabels(tempRlmCoef, inBoot=opt$bootstrap)
-    outputStatsBrikLabels=c("Mean", d[["labels"]])
+    sub.brik.labels=makeBrikLabels(tempRlmCoef, inBoot=opt$bootstrap)
+
+    outputStatsBrikLabels=c("Mean", sub.brik.labels[["labels"]])
     
     ## we add 1 to both numberOfStatsBriks and numberOfStatsBriks
     ## becasue makeBrikLabels does not take into account the
-    ## factthat we will add an additional subbrik (the mean) to
+    ## fact that we will add an additional subbrik (the mean) to
     ## the output stats. Hence the output of makeBrikLabels is
     ## always 1 too small
     
     ## the number of stats subbriks to write out. This is dictated by the
     ## model Formula, changes to it likely imply changes to this number
     ##numberOfStatsBriks=length(outputStatsBrikLabels)
-    numberOfStatsBriks=d[["numberOfLabels"]] + 1
+    numberOfStatsBriks=length(outputStatsBrikLabels)
     
-    bootstrapStatsStartAt=0
+    bootstrapStatsStartAt=NA
     if (opt$bootstrap) {
-        bootstrapStatsStartAt=d[["bootstrapLabelsStartAt"]] + 1
+        bootstrapStatsStartAt=sub.brik.labels[["bootstrapLabelsStartAt"]] + 1
     }
     
     ##stop("Stopping")
     
-    maxIter=100
-    resamples=opt$resamples
+    maxIter=25
+
     Stats = array(0, c(dimX, dimY, dimZ, numberOfStatsBriks))
     cat(paste("Starting at", date(), "\n"))
     startTime=proc.time()
@@ -651,6 +660,7 @@ for (seed in seeds) {
         cluster = makeCluster(ncpus, type = "SOCK", outfile=file.path(group.results.dir, clusterLogFilename))
         clusterEvalQ(cluster, library(MASS))
         clusterEvalQ(cluster, library(boot))
+        clusterSetupRNG(cluster, seed=seed.value)
         ## clusterEvalQ(cluster, library(compiler))        
         ## clusterEvalQ(cluster, enableJIT(3))     
         ## export the bootRegression function so that it can be sees
@@ -666,12 +676,12 @@ for (seed in seeds) {
             }
             Stats[ , , kk, ] = aperm(parApply(cluster, mrData[ , , kk, ],  c(1, 2), runRegression,
                      inNumberOfStatsBriks=numberOfStatsBriks, inModel=model, inModelFormula=modelFormula, inMaxIt=maxIter,
-                     inBoot=opt$bootstrap, inR=resamples, inBootstrapStatsStartAt=bootstrapStatsStartAt), c(2, 3, 1))
+                     inBoot=opt$bootstrap, inR=opt$resamples, inBootstrapStatsStartAt=bootstrapStatsStartAt), c(2, 3, 1))
         }
         stopCluster(cluster)
     } else {
         for ( kk in 1:dimZ ) {
-        ## for ( kk in 32:32 ) {            
+            ## for ( kk in 32:32 ) {            
             ## single cpu
             if (useProgressBar) {
                 setTxtProgressBar(pb, kk)
@@ -680,8 +690,11 @@ for (seed in seeds) {
             }
             Stats[ , , kk, ] = aperm(apply(mrData[ , , kk, ],  c(1, 2), runRegression,
                      inNumberOfStatsBriks=numberOfStatsBriks, inModel=model, inModelFormula=modelFormula, inMaxIt=maxIter,
-                     inBoot=opt$bootstrap, inR=resamples, inBootstrapStatsStartAt=bootstrapStatsStartAt), c(2, 3, 1))
+                     inBoot=opt$bootstrap, inR=opt$resamples, inBootstrapStatsStartAt=bootstrapStatsStartAt), c(2, 3, 1))
         }
+
+        ## Stats[i, j, k, ] = runRegression(mrData[i, j, k, ], inNumberOfStatsBriks=numberOfStatsBriks, inModel=model, inModelFormula=modelFormula, inMaxIt=maxIter,
+        ##          inBoot=TRUE, inR=opt$resamples, inBootstrapStatsStartAt=bootstrapStatsStartAt)
     }
     
     if (useProgressBar) {
@@ -705,7 +718,7 @@ for (seed in seeds) {
                ##label = baselineBrik$head$DATASET_NAME,
                label=outputStatsBrikLabels,
                note = paste(
-                   paste(paste("[", user, "@", hostname, ": ",  date(), "]", sep=""), normalizePath(get_Rscript_filename())),
+                   paste(paste("[", user, "@", hostname, ": ",  date(), "]", sep=""), get_Rscript_filename()),
                    paste("Model  formula:", gsub("~", "TILDE ", capture.output(print(modelFormula)))[1], sep=" ")),
                defhead=inputBrik)
                ## origin = inputBrik$origin,
