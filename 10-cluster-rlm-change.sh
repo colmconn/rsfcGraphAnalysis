@@ -47,10 +47,12 @@ cleanedSuffix=""
 
 #regressionVariables="CDRS.t.score.scaled"
 
-regressionVariables="CDRS.t.score"
+## regressionVariables="CDRS.t.score"
 
 # regressionVariables="CDRS.t.score.both.scaled"
-#regressionVariables="CDRS.t.score.both"
+#regressionVariables="CDRS.t.score.both.short"
+
+regressionVariables="CDRS.t.score.both.short"
 
 task="restingstate"
 
