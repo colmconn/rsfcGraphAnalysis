@@ -185,7 +185,8 @@ function makeScaledDataLink {
 }
 
 makeBetweenGroupBuckets=0
-makeCdrsrbuckets=1
+makeCdrsrbuckets=0
+makeShortCdrsrbuckets=1
 makeBdiBuckets=0
 makeCgasBuckets=0
 makeMascBuckets=0
@@ -267,6 +268,37 @@ if [[ $makeCdrsrbuckets == 1 ]] ; then
     maskBuckets mddOnly
 
 fi
+
+## make the CDRSR buckets with subject 364 removed as they appear to
+## be a outlier on their L amygdala-sgACC RSFC
+if [[ $makeShortCdrsrbuckets == 1 ]] ; then 
+    GROUP_DATA=$DATA/Group.data.CDRS.t.score.both.short
+    GROUP_RESULTS=$DATA/Group.results.CDRS.t.score.both.short
+    ctrlSubjects="$( cat ../data/config/new.ncl.subjectList.with.CDRS.t.score.AandC.txt )"
+    mddSubjects="$( cat ../data/config/new.short.mdd.subjectList.with.CDRS.t.score.AandC.txt )"
+    subjects="$ctrlSubjects $mddSubjects"
+
+    [[ ! -d $GROUP_DATA ]]    && mkdir -p $GROUP_DATA
+    [[ ! -d $GROUP_RESULTS ]] && mkdir -p $GROUP_RESULTS
+
+    makeScaledDataLink $GROUP_DATA
+
+    makeAutocorrelatedBuckets "mddAndCtrl" "$subjects"
+    makeAutocorrelatedBuckets "ctrlOnly" "$ctrlSubjects"
+    makeAutocorrelatedBuckets "mddOnly"  "$mddSubjects"
+
+    makeFwhmFiles "mddAndCtrl" "$subjects"     $GROUP_DATA
+    makeFwhmFiles "ctrlOnly"   "$ctrlSubjects" $GROUP_DATA
+    makeFwhmFiles "mddOnly"    "$mddSubjects"  $GROUP_DATA
+
+    #./makeGreyMatterMask.sh $GROUP_DATA $GROUP_RESULTS mddOnly $seedName
+
+    maskBuckets mddAndCtrl
+    maskBuckets ctrlOnly
+    maskBuckets mddOnly
+
+fi
+
 
 if [[ $makeBdiBuckets == 1 ]] ; then
     GROUP_DATA=$DATA/Group.data.BDI.II.Total.diff.withAandC
