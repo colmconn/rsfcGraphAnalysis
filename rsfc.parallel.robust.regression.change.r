@@ -144,7 +144,7 @@ printExcludedAndIncludedSubjects <- function(inData) {
 
 ## this is a very trimmed down version of the runRegression function
 ## below. It is only for use with bootstrapping
-bootRegression <- function(inData, inIndices, inModelFormula, inMaxIt=50, inNumberOfStatsBriks) {
+bootRegression<- function(inData, inIndices, inModelFormula, inMaxIt=50, inNumberOfStatsBriks) {
     outStats <- vector(mode="numeric", length=inNumberOfStatsBriks)
     if ( ! inherits(myrlm <- try(rlm(inModelFormula, data=inData[inIndices, ], maxit=inMaxIt), silent=FALSE),
                     "try-error") ) {
@@ -172,6 +172,7 @@ runRegression <- function (inData, inNumberOfStatsBriks, inModel, inModelFormula
         myrlm <- rlm(inModelFormula, data = inModel, maxit=inMaxIt)
         
         out.stats[1] = mean(inModel$mri)
+        ## cat("out.stats[1] = ",  out.stats[1], "\n")
         
         ## print(summary(myrlm))
         ## > coef(summary(model))
@@ -183,12 +184,14 @@ runRegression <- function (inData, inNumberOfStatsBriks, inModel, inModelFormula
         ## [1] 89.09177404  8.02218304 11.10567705  0.04087267  0.11462344  0.35658210  0.71157766  0.53700922  1.32507531
 
         model.coefficients=as.vector(t(coef(summary(myrlm))))
-        ## cat ("\nRLM Indices: ", 2:(inBootstrapStatsStartAt-1), "\n")
         ## cat ("model.coefficients: ", model.coefficients, "\n")
-        ## cat ("Length of stats vector is", length(model.coefficients), "\n")
-        out.stats[2:(inBootstrapStatsStartAt-1)]=model.coefficients
-
+        
+        ## stop("Check stuff")
+        
         if (inBoot) {
+            ## cat("boot out.stats indices 2:(inBootstrapStatsStartAt-1)", 2:(inBootstrapStatsStartAt-1), "\n")
+            out.stats[2:(inBootstrapStatsStartAt-1)]=model.coefficients
+            
             if (is.na(inBootstrapStatsStartAt)) {
                 stop("***ERROR in runRegression: inBootstrapStatsStartAt has not been set. It is currently NA. Cannot continue. Stopping\n")
             }
@@ -220,13 +223,14 @@ runRegression <- function (inData, inNumberOfStatsBriks, inModel, inModelFormula
                     ## upper bound on the CI
                     ci=boot.ci(boot.stats, conf = c(0.95), type = c("norm"), index = term.index)$normal[2:3]
                     ## cat("ci for", names(boot.stats$t0)[term.index], "is:", ci, "\n")
+                    ## cat("out.stats indices start.at:(start.at+3)", start.at:(start.at+3), "\n")
                     out.stats[start.at:(start.at+3)] = c(boot.bias[term.index], boot.t.coeff[term.index], ci)
                     start.at=start.at+4
                 }
             }
-        } ## end of if (inBoot) {
-        else {
-            out.stats[2:(length(model.coefficients)+1)]=model.coefficients
+        } else {
+            ## cat("no boot out.stats indices 2:inNumberOfStatsBriks", 2:inNumberOfStatsBriks, "\n")
+            out.stats[2:inNumberOfStatsBriks]=model.coefficients
         }
     } ## end of if ( ! all(inData == 0 ) ) {
     ## cat ("out.stats is: ", out.stats, "\n")
@@ -352,7 +356,7 @@ printOptionsSummary <- function () {
 
 if ( Sys.info()["sysname"] == "Darwin" ) {
     root.dir="/Volumes/data"
-    ## ncpus=as.integer(strsplit(system("sysctl hw.ncpu", intern=T), ' ')[[1]][2])
+    ncpus=as.integer(strsplit(system("sysctl hw.ncpu", intern=T), ' ')[[1]][2])
     cat(paste("*** Found" , ncpus, ifelse(ncpus == 1, "cpu", "cpus"), "\n"))
 } else if ( Sys.info()["sysname"] == "Linux" ) {
     root.dir="/data"
@@ -408,12 +412,17 @@ if (interactive()) {
     ##     "-v", "CDRS.t.score.scaled.diff",
     ##     "-s", "juelich_amygdala_seeds_weights.txt")
 
+    ## args=c(
+    ##     "-b", "-r", "100",
+    ##     "-c", "new.mdd.CDRS.t.score.both.short.scores.csv",
+    ##     "-v", "CDRS.t.score.both.short",
+    ##     "-s", "juelich_whole_amygdala_seeds.txt")
 
-    args=c(
-        "-b", "-r", "100",
-        "-c", "new.mdd.CDRS.t.score.both.short.scores.csv",
-        "-v", "CDRS.t.score.both.short",
-        "-s", "juelich_whole_amygdala_seeds.txt") 
+
+    args=c("-p", "-b",
+        "-c", "new.mdd.CDRS.t.score.both.scores.csv",
+        "-v", "CDRS.t.score.both",
+        "-s", "juelich_whole_amygdala_seeds.txt")
     opt = getopt(spec, opt=args)
 } else {
     opt = getopt(spec)
@@ -620,7 +629,7 @@ for (seed in seeds[1]) {
     sub.brik.labels=makeBrikLabels(tempRlmCoef, inBoot=opt$bootstrap)
 
     outputStatsBrikLabels=c("Mean", sub.brik.labels[["labels"]])
-    
+
     ## we add 1 to both numberOfStatsBriks and numberOfStatsBriks
     ## becasue makeBrikLabels does not take into account the
     ## fact that we will add an additional subbrik (the mean) to
@@ -655,7 +664,8 @@ for (seed in seeds[1]) {
         cluster = makeCluster(ncpus, type = "SOCK", outfile=file.path(group.results.dir, clusterLogFilename))
         clusterEvalQ(cluster, library(MASS))
         clusterEvalQ(cluster, library(boot))
-        clusterSetupRNG(cluster, seed=seed.value)
+        clusterExport(cluster, c("bootRegression", "runRegression"))
+        ## clusterSetupRNG(cluster, seed=seed.value)
         
         ##function (inData, inNumberOfStatsBriks, inModel, inModelFormula, inMaxIt=50, inBoot=FALSE, inR=25, inBootstrapStatsStartAt=NA) {
         for ( kk in 1:dimZ) {
@@ -682,9 +692,9 @@ for (seed in seeds[1]) {
                      inNumberOfStatsBriks=numberOfStatsBriks, inModel=model, inModelFormula=modelFormula, inMaxIt=maxIter,
                      inBoot=opt$bootstrap, inR=opt$resamples, inBootstrapStatsStartAt=bootstrapStatsStartAt), c(2, 3, 1))
         }
-
+        ## the line below is useful for debugging the runRegression function, particularly when using boot strapping
         ## Stats[i, j, k, ] = runRegression(mrData[i, j, k, ], inNumberOfStatsBriks=numberOfStatsBriks, inModel=model, inModelFormula=modelFormula, inMaxIt=maxIter,
-        ##          inBoot=TRUE, inR=opt$resamples, inBootstrapStatsStartAt=bootstrapStatsStartAt)
+        ##          inBoot=opt$bootstrap, inR=opt$resamples, inBootstrapStatsStartAt=bootstrapStatsStartAt)
     }
     
     if (useProgressBar) {
