@@ -17,8 +17,12 @@ if ( ! is.na(AFNI_R_DIR) ) {
     stop("Couldn't find AFNI_R_DIR in environment. This points to the location from which to load functions for reading and writing AFNI BRIKS. Stopping!")
 }
 
+## seting the seed before starting the cluster causes problems when starting multiple SNOW SOCK clusters
+## within a short time of each other as the PORT used for communication is generated randomly which can
+## result in different clusters tryign to use the same port for sommunication
+
 seed.value=1234567
-set.seed(seed.value)
+## set.seed(seed.value)
 
 ##########################################################################################################################################################################
 ### START OF FUNCTIONS ###################################################################################################################################################
@@ -144,14 +148,14 @@ printExcludedAndIncludedSubjects <- function(inData) {
 
 ## this is a very trimmed down version of the runRegression function
 ## below. It is only for use with bootstrapping
-bootRegression<- function(inData, inIndices, inModelFormula, inMaxIt=50, inNumberOfStatsBriks) {
-    outStats <- vector(mode="numeric", length=inNumberOfStatsBriks)
-    if ( ! inherits(myrlm <- try(rlm(inModelFormula, data=inData[inIndices, ], maxit=inMaxIt), silent=FALSE),
+bootRegression<- function(inData, inIndices, inModelFormula, inMaxIt=50, inNumberOfBetaValues) {
+    outStats <- vector(mode="numeric", length=inNumberOfBetaValues)
+    if ( ! inherits(myrlm <- try(rlm(inModelFormula, data=inData[inIndices, ], maxit=inMaxIt), silent=TRUE),
                     "try-error") ) {
         ## cat ("length(coefficients(myrlm)) is ", coefficients(myrlm), "\n")
         return(coefficients(myrlm))
     } else {
-        cat("Got an exception\n")
+        ## cat("Got an exception\n")
         return(outStats)
     }
 }
@@ -168,9 +172,10 @@ runRegression <- function (inData, inNumberOfStatsBriks, inModel, inModelFormula
         ## branch and can try the rlm
         
         inModel$mri<-inData
-        
         myrlm <- rlm(inModelFormula, data = inModel, maxit=inMaxIt)
-        
+        numberOfBetaValues=length(coefficients(myrlm))
+        ## print(myrlm)
+        ## print(summary(myrlm))
         out.stats[1] = mean(inModel$mri)
         ## cat("out.stats[1] = ",  out.stats[1], "\n")
         
@@ -199,7 +204,7 @@ runRegression <- function (inData, inNumberOfStatsBriks, inModel, inModelFormula
             ## cat ("inside inBoot out.stats is: ", out.stats, "\n")
             ## cat ("number of stats briks should be: ", length(2:(inBootstrapStatsStartAt-1)), "\n")
             
-            boot.stats=boot(inModel, bootRegression, R=inR, inModelFormula=inModelFormula, inMaxIt=inMaxIt, inNumberOfStatsBriks=length(2:(inBootstrapStatsStartAt-1)))
+            boot.stats=boot(inModel, bootRegression, R=inR, inModelFormula=inModelFormula, inMaxIt=inMaxIt, inNumberOfBetaValues=numberOfBetaValues)
             ## cat("boot.stats is\n")
             ## print(boot.stats)
             ## print(class(boot.stats))
@@ -419,10 +424,10 @@ if (interactive()) {
     ##     "-s", "juelich_whole_amygdala_seeds.txt")
 
 
-    args=c("-p", "-b",
+    args=c("-b", "-r", "100",
         "-c", "new.mdd.CDRS.t.score.both.scores.csv",
         "-v", "CDRS.t.score.both",
-        "-s", "juelich_whole_amygdala_seeds.txt")
+        "-s", "juelich_left_whole_amygdala_seed.txt")
     opt = getopt(spec, opt=args)
 } else {
     opt = getopt(spec)
@@ -661,12 +666,13 @@ for (seed in seeds) {
         library(snow)
         
         ## cluster = makeCluster(ncpus, type = "SOCK")
-        cluster = makeCluster(ncpus, type = "SOCK", outfile=file.path(group.results.dir, clusterLogFilename))
+        cat("*** Starting cluster... ")
+        cluster = makeCluster(rep("localhost", ncpus), type = "SOCK", outfile=file.path(group.results.dir, clusterLogFilename))
         clusterEvalQ(cluster, library(MASS))
         clusterEvalQ(cluster, library(boot))
         clusterExport(cluster, c("bootRegression", "runRegression"))
-        ## clusterSetupRNG(cluster, seed=seed.value)
-        
+        clusterSetupRNG(cluster, seed=seed.value)
+        cat("Done\n")
         ##function (inData, inNumberOfStatsBriks, inModel, inModelFormula, inMaxIt=50, inBoot=FALSE, inR=25, inBootstrapStatsStartAt=NA) {
         for ( kk in 1:dimZ) {
             if (useProgressBar) {
@@ -692,6 +698,7 @@ for (seed in seeds) {
                      inNumberOfStatsBriks=numberOfStatsBriks, inModel=model, inModelFormula=modelFormula, inMaxIt=maxIter,
                      inBoot=opt$bootstrap, inR=opt$resamples, inBootstrapStatsStartAt=bootstrapStatsStartAt), c(2, 3, 1))
         }
+        
         ## the line below is useful for debugging the runRegression function, particularly when using boot strapping
         ## Stats[i, j, k, ] = runRegression(mrData[i, j, k, ], inNumberOfStatsBriks=numberOfStatsBriks, inModel=model, inModelFormula=modelFormula, inMaxIt=maxIter,
         ##          inBoot=opt$bootstrap, inR=opt$resamples, inBootstrapStatsStartAt=bootstrapStatsStartAt)
