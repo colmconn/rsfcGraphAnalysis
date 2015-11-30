@@ -360,7 +360,7 @@ if ( Sys.info()["sysname"] == "Darwin" ) {
     cat(paste("*** Found" , ncpus, ifelse(ncpus == 1, "cpu", "cpus"), "\n"))
 } else if ( Sys.info()["sysname"] == "Linux" ) {
     root.dir="/data"
-    ncpus=1
+    ncpus=16
     cat(paste("*** Found" , ncpus, ifelse(ncpus == 1, "cpu", "cpus"), "\n"))    
 } else {
     stop(paste("Sorry can't set data directories for this computer\n"))
@@ -481,7 +481,7 @@ if ( ! dir.exists( group.results.dir) ) {
 ## turn on compilation of all loops before they are run for the first time
 ## enableJIT(3)
 
-for (seed in seeds[1]) {
+for (seed in seeds) {
     seedName=getSeedName(seed)
     
     cat("####################################################################################################\n")
