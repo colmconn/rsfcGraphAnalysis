@@ -737,7 +737,7 @@ for (seed in seeds) {
     if ( is.matrix(tempRlmCoef) ) {
         cat ("Making statpar arguments\n")
         
-        afniTtestBrikIds=makeAfniTtestBrikIds(tempRlmCoef)
+        afniTtestBrikIds=makeAfniTtestBrikIds(tempRlmCoef, inBoot=opt$boot)
         statparArguments=makeAfniStatparArguments(tempRlmDf[2], afniTtestBrikIds)
         statpar = paste(statpar, statparArguments)    
     }
