@@ -483,8 +483,6 @@ cat("*** Saving  group data to  :", group.results.dir, "\n")
 if ( ! dir.exists( group.results.dir) ) {
     stop(sprintf("*** The group results directory (%s) does not exist. Cannot continue\n", group.results.dir))
 }
-## turn on compilation of all loops before they are run for the first time
-## enableJIT(3)
 
 for (seed in seeds) {
     seedName=getSeedName(seed)
