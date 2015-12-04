@@ -185,8 +185,12 @@ function makeScaledDataLink {
 }
 
 makeBetweenGroupBuckets=0
+makeBetweenGroupBucketsWithMedcicated=0
+
 makeCdrsrbuckets=0
-makeShortCdrsrbuckets=1
+makeShortCdrsrbuckets=0
+makeCdrsrbucketsWithMedcicated=1
+
 makeBdiBuckets=0
 makeCgasBuckets=0
 makeMascBuckets=0
@@ -213,6 +217,41 @@ if [[ $makeBetweenGroupBuckets == 1 ]] ; then
     ## using the subdivisions or not
     ctrlSubjects="$( cat ../data/config/clean.ncl.subjectList.txt )"
     mddSubjects="$( cat ../data/config/clean.mdd.subjectList.txt )"
+    subjects="$ctrlSubjects $mddSubjects"
+    
+    [[ ! -d $GROUP_DATA ]]    && mkdir -p $GROUP_DATA
+    [[ ! -d $GROUP_RESULTS ]] && mkdir -p $GROUP_RESULTS
+
+    makeAutocorrelatedBuckets "mddAndCtrl" "$subjects"
+    makeAutocorrelatedBuckets "ctrlOnly"   "$ctrlSubjects"
+    makeAutocorrelatedBuckets "mddOnly"    "$mddSubjects"
+    ##    makeAutocorrelatedBuckets "attemptOnly"     "$attemptSubjects"
+    
+    makeFwhmFiles "mddAndCtrl" "$subjects"     $GROUP_DATA
+    makeFwhmFiles "ctrlOnly"   "$ctrlSubjects" $GROUP_DATA
+    makeFwhmFiles "mddOnly"    "$mddSubjects"  $GROUP_DATA
+    ## makeFwhmFiles "attemptOnly" "$attemptSubjects"  $GROUP_DATA
+    
+    # echo "Calling makeGreyMatterMask.sh"
+    # ./makeGreyMatterMask.sh $GROUP_DATA $GROUP_RESULTS mddAndCtrl $seedName
+    
+    maskBuckets mddAndCtrl
+    maskBuckets ctrlOnly
+    maskBuckets mddOnly
+    ## maskBuckets attemptOnly
+
+fi
+
+if [[ $makeBetweenGroupBucketsWithMedcicated == 1 ]] ; then 
+
+    GROUP_DATA=$DATA/Group.data.withMedicated
+    GROUP_RESULTS=$DATA/Group.results.withMedicated
+
+    ## used for suplemental analysis to weighted subdivision analysis
+    ## to exmaine whether the RSFC results are highly dependent on
+    ## using the subdivisions or not
+    ctrlSubjects="$( cat ../data/config/clean.ncl.subjectList.txt )"
+    mddSubjects="$( cat ../data/config/clean.and.medicated.mdd.subjectList.txt )"
     subjects="$ctrlSubjects $mddSubjects"
     
     [[ ! -d $GROUP_DATA ]]    && mkdir -p $GROUP_DATA
@@ -268,6 +307,35 @@ if [[ $makeCdrsrbuckets == 1 ]] ; then
     maskBuckets mddOnly
 
 fi
+
+if [[ $makeCdrsrbucketsWithMedcicated == 1 ]] ; then 
+    GROUP_DATA=$DATA/Group.data.CDRS.t.score.diff.withMedicated.predictive
+    GROUP_RESULTS=$DATA/Group.results.CDRS.t.score.diff.withMedicated.predictive
+    # ctrlSubjects="$( cat ../data/config/new.ncl.subjectList.with.CDRS.t.score.AandC.txt )"
+    mddSubjects="$( cat ../data/config/new.mdd.subjectList.with.CDRS.t.score.withMedicated.AandC.txt )"
+    subjects="$ctrlSubjects $mddSubjects"
+
+    [[ ! -d $GROUP_DATA ]]    && mkdir -p $GROUP_DATA
+    [[ ! -d $GROUP_RESULTS ]] && mkdir -p $GROUP_RESULTS
+
+    makeScaledDataLink $GROUP_DATA
+
+    # makeAutocorrelatedBuckets "mddAndCtrl" "$subjects"
+    # makeAutocorrelatedBuckets "ctrlOnly" "$ctrlSubjects"
+    makeAutocorrelatedBuckets "mddOnly"  "$mddSubjects"
+
+    # makeFwhmFiles "mddAndCtrl" "$subjects"     $GROUP_DATA
+    # makeFwhmFiles "ctrlOnly"   "$ctrlSubjects" $GROUP_DATA
+    makeFwhmFiles "mddOnly"    "$mddSubjects"  $GROUP_DATA
+
+    #./makeGreyMatterMask.sh $GROUP_DATA $GROUP_RESULTS mddOnly $seedName
+
+    # maskBuckets mddAndCtrl
+    # maskBuckets ctrlOnly
+    maskBuckets mddOnly
+
+fi
+
 
 ## make the CDRSR buckets with subject 364 removed as they appear to
 ## be a outlier on their L amygdala-sgACC RSFC
