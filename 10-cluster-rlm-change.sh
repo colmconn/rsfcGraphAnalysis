@@ -17,7 +17,7 @@ MDD_TISSUEPRIORS=$ROOT/tissuepriors
 scriptsDir=${ROOT}/scripts
 
 logDir=${DATA}/log
-GETOPT_OPTIONS=$( $GETOPT  -o "l:is:n:op:c:es:" --longoptions "seedlist:,useInherentSmoothness,svc:,nn:,overwrite,pvalue:,cpvalue:,cleaned,sided:" -n ${programName} -- "$@" )
+GETOPT_OPTIONS=$( $GETOPT  -o "l:is:n:op:c:es:b" --longoptions "seedlist:,useInherentSmoothness,svc:,nn:,overwrite,pvalue:,cpvalue:,cleaned,sided:,booted" -n ${programName} -- "$@" )
 exitStatus=$?
 if [ $exitStatus != 0 ] ; then 
     echo "Error with getopt. Terminating..." >&2 
@@ -50,9 +50,11 @@ cleanedSuffix=""
 ## regressionVariables="CDRS.t.score"
 
 # regressionVariables="CDRS.t.score.both.scaled"
-#regressionVariables="CDRS.t.score.both.short"
+#regressionVariables="CDRS.t.score.both"
 
-regressionVariables="CDRS.t.score.both.short"
+regressionVariables="CDRS.t.score.scaled.diff"
+
+## regressionVariables="CDRS.t.score.both.short"
 
 task="restingstate"
 
@@ -63,10 +65,17 @@ csvFile=regressions.parameters.csv
 ## for use with 3dClustSim
 ## side="_2sided"
 
+## global variable to control whether bootstrapped (1) or
+## non-bootstrapped (0) results are used when clustering
+booted=0
+
+
 # Note the quotes around `$GETOPT_OPTIONS': they are essential!
 eval set -- "$GETOPT_OPTIONS"
 while true ; do 
     case "$1" in
+	-b|--booted)
+	    booted=1; shift ;;
 	-l|--seedlist)
 	    seedList=$2; shift 2 ;;
 	-p|--pvalue)
@@ -116,7 +125,11 @@ function makeBucketFilePrefix {
     local rvName=$3
 
     #       restingstate.mddOnly.R_SFA.3mm.MASC.tscore.rlm.bucket.20141015-1132PDT+tlrc.HEAD
-    prefix="restingstate.reversed.formula.${group}.${seedName}.${rvName}.rlm.bucket"
+    if [[ $booted -eq 1 ]] ; then 
+	prefix="restingstate.reversed.formula.${group}.${seedName}.${rvName}.booted.rlm.bucket"
+    else
+	prefix="restingstate.reversed.formula.${group}.${seedName}.${rvName}.rlm.bucket"
+    fi
 
     echo $prefix
 }
@@ -145,12 +158,27 @@ function extractCoefBrikId {
 function extractTvalueBrikId {
     local rvName=$1
     local bucketFilename=$2
-    
-    label=$( 3dinfo -label $bucketFilename | tr "|" "\n" | grep "${rvName}.t.value"  2> /dev/null )
+
+    if [[ $booted -eq 1 ]] ; then 
+	label=$( 3dinfo -label $bucketFilename | tr "|" "\n" | grep "${rvName}.booted.t.value"  2> /dev/null )
+    else
+	label=$( 3dinfo -label $bucketFilename | tr "|" "\n" | grep "${rvName}.t.value"  2> /dev/null )
+    fi
     id=$( 3dinfo -label2index $label $bucketFilename 2> /dev/null )
     
     echo $id
 }
+
+function extractBiasBrikId {
+    local rvName=$1
+    local bucketFilename=$2
+
+    label=$( 3dinfo -label $bucketFilename | tr "|" "\n" | grep "${rvName}.bias"  2> /dev/null )
+    id=$( 3dinfo -label2index $label $bucketFilename 2> /dev/null )
+    
+    echo $id
+}
+
 
 function extractTStatpar {
     local bucket=$1
@@ -158,7 +186,7 @@ function extractTStatpar {
 
     a=$(3dAttribute BRICK_STATSYM $bucket\[$subbrikId\] )
     b=${a##*(}
-	c=${b%%)*}
+    c=${b%%)*}
 
     echo $c
 }
@@ -266,6 +294,10 @@ else
     echo "*** Running a $side test"
 fi
 
+if [[ $booted -eq 1 ]] ; then
+    echo "*** Using bootstapped regression BRIKs"
+fi
+
 for regressionVariable in $regressionVariables ; do
 
     # GROUP_DATA=$DATA/Group.data.$regressionVariable.withAandC${cleanedSuffix}
@@ -345,11 +377,14 @@ for regressionVariable in $regressionVariables ; do
 	# coefBrikId=$( extractCoefBrikId $regressionVariable $latestRlmBucketFile )
 	# tvalueBrikId=$( extractTvalueBrikId $regressionVariable $latestRlmBucketFile )
 
-	## use the following if the equation used in teh regression analysis is $regressionVariable ~ mri + age.in.years
+	## use the following if the equation used in the regression analysis is $regressionVariable ~ mri + age.in.years
 	coefBrikId=$( extractCoefBrikId "mri" $latestRlmBucketFile )
 	tvalueBrikId=$( extractTvalueBrikId "mri" $latestRlmBucketFile )
 
-	
+	if [[ $booted -eq 1 ]] ; then 
+	    biasBrikId=$( extractBiasBrikId "mri" $latestRlmBucketFile )
+	fi
+	    
 	nVoxels=$( extractNVoxels $NN $cPvalue $pValue $cstempPrefix )
 	## nVoxels=42.2
 	df=$( extractTStatpar $latestRlmBucketFile $tvalueBrikId )
@@ -358,6 +393,9 @@ for regressionVariable in $regressionVariables ; do
 	echo "### fwhm = ${usedFwhm}"
 	echo "### coefBrikId = $coefBrikId"
 	echo "### tvalueBrikId = $tvalueBrikId"
+	if [[ $booted -eq 1 ]] ; then
+	    echo "### biasBrikId = $biasBrikId"
+	fi
 	echo "### rmm = $rmm"
 	echo "### nVoxels = $nVoxels"
 	echo "### df = $df"
@@ -383,7 +421,7 @@ for regressionVariable in $regressionVariables ; do
 	# 	    -nosum -1thresh $tThreshold -dxyz=1 $rmm $nVoxels -overwrite \
 	# 	    ${outputPrefix}+tlrc.HEAD  > clust.$suffix.txt
 	
-	if [ -f clorder.$suffix+tlrc.HEAD ] ; then 
+	if [[ -f clorder.$suffix+tlrc.HEAD ]] ; then 
 	    3drefit -cmap INT_CMAP  clorder.$suffix+tlrc.HEAD
 
 	    3dcalc -datum float -a clorder.${suffix}+tlrc.HEAD -b $latestRlmBucketFile\[$tvalueBrikId\] -expr "step(a)*b" -prefix clust.$suffix
@@ -394,6 +432,10 @@ for regressionVariable in $regressionVariables ; do
 
 	    3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD $latestRlmBucketFile\[$coefBrikId\]    > roiStats.$suffix.averageCoefficientValue.txt
 	    3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD $latestRlmBucketFile\[$tvalueBrikId\]  > roiStats.$suffix.averageTValue.txt
+
+	    if [[ $booted -eq 1 ]] ; then
+		3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD $latestRlmBucketFile\[$biasBrikId\]  > roiStats.$suffix.averageBiasValue.txt
+	    fi
 	    
 	else
 	    nClusters=0
