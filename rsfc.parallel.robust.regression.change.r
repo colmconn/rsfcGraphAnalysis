@@ -210,16 +210,20 @@ runRegression <- function (inData, inNumberOfStatsBriks, inModel, inModelFormula
             ## print(class(boot.stats))
             ## print(is.vector(boot.stats))
             if (is(boot.stats, "boot")) {
-                boot.bias=apply(boot.stats$t, 2, mean) - boot.stats$t0
                 ## these are vectors with as many columns as there are terms in
                 ## the regression model. Don't forget to include the intercept
-                ## when you're trying to mentalize this
+                ## (assuming there is one in the model) when you're trying
+                ## to mentalize this
+                ## really need to add the mean bootstrapped coefficient values to the output stats vector
+                boot.beta.mean=apply(boot.stats$t, 2, mean)
+                boot.bias=boot.beta.mean - boot.stats$t0
                 boot.se.coeff=apply(boot.stats$t, 2, sd)
                 boot.t.coeff=boot.stats$t0 / boot.se.coeff
 
-                ## cat("boot.bias is",     boot.bias, "\n")
-                ## cat("boot.se.coeff is", boot.se.coeff, "\n")
-                ## cat("boot.t.coeff is",  boot.t.coeff, "\n")
+                ## cat("boot.beta.mean is: ", boot.beta.mean, "\n")
+                ## cat("boot.bias is     : ", boot.bias, "\n")                
+                ## cat("boot.se.coeff is : ", boot.se.coeff, "\n")
+                ## cat("boot.t.coeff is  : ", boot.t.coeff, "\n")
 
                 start.at=inBootstrapStatsStartAt
                 for (term.index in seq(1, length(boot.t.coeff))) {
@@ -229,8 +233,8 @@ runRegression <- function (inData, inNumberOfStatsBriks, inModel, inModelFormula
                     ci=boot.ci(boot.stats, conf = c(0.95), type = c("norm"), index = term.index)$normal[2:3]
                     ## cat("ci for", names(boot.stats$t0)[term.index], "is:", ci, "\n")
                     ## cat("out.stats indices start.at:(start.at+3)", start.at:(start.at+3), "\n")
-                    out.stats[start.at:(start.at+3)] = c(boot.bias[term.index], boot.t.coeff[term.index], ci)
-                    start.at=start.at+4
+                    out.stats[start.at:(start.at+4)] = c(boot.beta.mean[term.index], boot.bias[term.index], boot.t.coeff[term.index], ci)
+                    start.at=start.at+5
                 }
             }
         } else {
@@ -238,8 +242,8 @@ runRegression <- function (inData, inNumberOfStatsBriks, inModel, inModelFormula
             out.stats[2:inNumberOfStatsBriks]=model.coefficients
         }
     } ## end of if ( ! all(inData == 0 ) ) {
-    ## cat ("out.stats is: ", out.stats, "\n")
 
+    ## cat ("out.stats is: ", out.stats, "\n")
     ## longest.label=max(sapply(outputStatsBrikLabels, nchar))
     ## cc=cbind (outputStatsBrikLabels, out.stats)
     ## cc=cbind(seq(1:dim(cc)[1]), cc)
@@ -387,7 +391,7 @@ verbose=FALSE
 ## this indicates whether bootstrapping should be performed
 ## doBootstrapping=FALSE
 
-bootstrappingBrikLabelSuffxes=c("bias", "booted.t.value", "ciLower", "ciUpper")
+bootstrappingBrikLabelSuffxes=c("booted.mean.beta", "bias", "booted.t.value", "ciLower", "ciUpper")
 
 ################################################################################
 NO_ARGUMENT="0"
@@ -423,11 +427,17 @@ if (interactive()) {
     ##     "-v", "CDRS.t.score.both.short",
     ##     "-s", "juelich_whole_amygdala_seeds.txt")
 
-
-    args=c("-b", "-r", "100",
-        "-c", "new.mdd.CDRS.t.score.both.scores.csv",
-        "-v", "CDRS.t.score.both",
+    args=c(
+        "-b", "-r", "100",
+        "-c", "new.mdd.CDRS.t.score.scores.csv",
+        "-v", "CDRS.t.score",
         "-s", "juelich_left_whole_amygdala_seed.txt")
+
+
+    ## args=c("-b", "-r", "100",
+    ##     "-c", "new.mdd.CDRS.t.score.both.scores.csv",
+    ##     "-v", "CDRS.t.score.both",
+    ##     "-s", "juelich_left_whole_amygdala_seed.txt")
     opt = getopt(spec, opt=args)
 } else {
     opt = getopt(spec)
@@ -461,15 +471,17 @@ rvVariable=opt$variable
 
 if (grepl("diff|rstandard", rvVariable, fixed=FALSE)) {
     ## the temporal difference regressions have seperate directories
-    group.data.dir=file.path(data.dir, paste("Group.data", rvVariable, "withAandC", sep="."))
-    group.results.dir=file.path(data.dir, paste("Group.results", rvVariable, "withAandC", sep="."))
+    group.data.dir=file.path(data.dir, paste("Group.data", rvVariable, sep="."))
+    group.results.dir=file.path(data.dir, paste("Group.results", rvVariable, sep="."))
 } else if (grepl("both", rvVariable, fixed=TRUE) ) {
     group.data.dir=file.path(data.dir, paste("Group.data", rvVariable, sep="."))
     group.results.dir=file.path(data.dir, paste("Group.results", rvVariable, sep="."))
 } else {
     ## the temporal difference regressions have seperate directories
-    group.data.dir=file.path(data.dir, paste("Group.data", rvVariable, "withAandC", sep="."))
-    group.results.dir=file.path(data.dir, paste("Group.results", rvVariable, "withAandC", sep="."))
+    ## group.data.dir=file.path(data.dir, paste("Group.data", rvVariable, "withAandC", sep="."))
+    ## group.results.dir=file.path(data.dir, paste("Group.results", rvVariable, "withAandC", sep="."))
+    group.data.dir=file.path(data.dir, paste("Group.data", rvVariable, sep="."))
+    group.results.dir=file.path(data.dir, paste("Group.results", rvVariable, sep="."))
 }
 
 if (opt$cleaned) {
@@ -574,7 +586,8 @@ for (seed in seeds) {
             as.vector(mgd[, "subject"]),            
             as.vector(mgd[, rvVariable]),
             as.vector(mgd[, "age.in.years"]))
-        colnames(model) = c("Grp", "subject", paste(formula.variable, c("A.scaled", "C.scaled"), sep="."), "age.in.years")
+        ## colnames(model) = c("Grp", "subject", paste(formula.variable, c("A.scaled", "C.scaled"), sep="."), "age.in.years")
+        colnames(model) = c("Grp", "subject", formula.variable, "age.in.years")
     }
 
     printExcludedAndIncludedSubjects(mgd)
@@ -744,5 +757,3 @@ for (seed in seeds) {
     system(statpar)
     regressionCount=regressionCount+1
 } ## end of  for (seed in seeds)
-
-
