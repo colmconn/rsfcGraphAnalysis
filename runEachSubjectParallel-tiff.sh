@@ -35,7 +35,7 @@ for subject in $subjects ; do
 	
      if [[ -f $RSFC_ROOT/$taskDir/data/$subject/${subject}$task+orig.HEAD ]] ; then
 
-	cat <<EOF > run/run-yeo7estop-$subject.sh
+	cat <<EOF > run/run-yeo7libestop-$subject.sh
 #!/bin/bash
 
 ## jobname
@@ -84,13 +84,17 @@ cd $RSFC_ROOT/$taskDir/scripts
 #./02-preprocessFunctional.sh --subject=$subject --drop=0 --fwhm=4.2 -c 0.3
 
 ## ./04-extractRsfcTimeseriesFromAalMasks.sh  --subject=$subject -l ../standard/aal_for_SPM8/fcseedlist3mm.txt 
- ./04-extractRsfcTimeseriesFromAalMasks-tiff.sh --subject=$subject --seedlist /data/sanDiego/rsfcGraphAnalysis/standard/yeo7liberal/yeo_7liberal_split2.txt
+##./04-extractRsfcTimeseriesFromAalMasks-tiff.sh --subject=$subject --seedlist /data/sanDiego/rsfcGraphAnalysis/standard/yeo7liberal/yeo_7liberal_split2.txt
+
+ ./04-extractRsfcTimeseriesFromAalMasks-tiff.sh --subject=$subject --seedlist /data/sanDiego/rsfcGraphAnalysis/standard/yeo7liberal/yeo_rsn_7liberal.txt
+
+ ./04-extractEstopTimeseriesFromAalMasks-tiff.sh --subject=$subject --seedlist /data/sanDiego/rsfcGraphAnalysis/standard/yeo7liberal/yeo_rsn_7liberal.txt
 
 EOF
-	chmod +x  run/run-yeo7estop-$subject.sh
+	chmod +x  run/run-yeo7libestop-$subject.sh
 	echo $subject
-	qsub -o ../log/$subject.yeo7estop.log \
-	     run/run-yeo7estop-$subject.sh
+	qsub -o ../log/$subject.yeo7libestop.log \
+	     run/run-yeo7libestop-$subject.sh
      else
      	echo "*** No such file: $RSFC_ROOT/$taskDir/data/$subject/${subject}$task+orig.HEAD"
      fi

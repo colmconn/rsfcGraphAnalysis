@@ -54,13 +54,13 @@ fi
 echo "*** Extracting ESTOP timeseries from the following seeds:"
 echo $seeds
 
-[[ ! -d $DATA/$subjectNumber/estop/yeo7 ]] && mkdir -p $DATA/$subjectNumber/estop/yeo7
-cd $DATA/$subjectNumber/estop/yeo7
+[[ ! -d $DATA/$subjectNumber/estop/yeo7lib ]] && mkdir -p $DATA/$subjectNumber/estop/yeo7lib
+cd $DATA/$subjectNumber/estop/yeo7lib
 
 preprocessedEstopDir=$DATA/$subjectNumber/estopPreprocessed
 cd $DATA/$subjectNumber/estopPreprocessed
 chmod +wx ${subjectNumber}.pm.cleanEPI.MNI.nii.gz
-cd $DATA/$subjectNumber/estop/yeo7
+cd $DATA/$subjectNumber/estop/yeo7lib
 
 for seed in $seeds ; do
 

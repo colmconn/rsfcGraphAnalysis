@@ -59,7 +59,7 @@ function makeDirectoryList {
 cleanedEpiFile=$DATA/$subject/${task}Preprocessed/${subject}.pm.cleanEPI.MNI.nii.gz
 	if [[ ! -f $DATA/$subject/${task}Preprocessed/00_DO_NOT_ANALYSE_${subject}_${excessiveMotionThresholdPercentage}percent.txt ]] ; then
 	    if [[ -d $DATA/$subject/${task}/yeo7 ]] ; then
-		echo $subject/${task}/yeo7/ >> $directoryListFile
+		echo $subject/${task}/yeo7lib/ >> $directoryListFile
 #	echo "$i, Include, $subject"
 		(( i=i+1 ))
 	    else
@@ -80,12 +80,12 @@ cleanedEpiFile=$DATA/$subject/${task}Preprocessed/${subject}.pm.cleanEPI.MNI.nii
 #subjects="364_A 364_C 370_A 421_A"
 subjects="$( cat /data/sanDiego/rsfcGraphAnalysis/data/config/estop.subjList.txt )"
 #subjects="$( cat /data/sanDiego/rsfcGraphAnalysis/data/config/rs114a.subj.txt )"
-#task=rsfc
-task=estop
-cat /dev/null > rm.${task}.yeo7Liberal.txt
-makeDirectoryList "$subjects" ${task} rm.${task}.yeo7Liberal.txt
+task=rsfc
+#task=estop
+cat /dev/null > rm.${task}.yeo7libNetworks.txt
+makeDirectoryList "$subjects" ${task} rm.${task}.yeo7libNetworks.txt
 echo -n "Making tarball..."
-(cd $DATA/; tar czf ${task}.yeo7Liberal.tar.gz $( cat ../scripts/rm.${task}.yeo7Liberal.txt ) )
+(cd $DATA/; tar czf ${task}.yeo7libNetworks.tar.gz $( cat ../scripts/rm.${task}.yeo7libNetworks.txt ) )
 echo "Done"
 
 # subjects="$( cat /data/sanDiego/cESTOP/data/config/clean.estop.subjList.txt /data/sanDiego/cESTOP/data/config/clean.estop.mddfollowup.txt  )"
