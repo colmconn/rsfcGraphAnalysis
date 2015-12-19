@@ -117,67 +117,68 @@ summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
     return(datac)
 }
 
-makePublicationTable <- function(inClusterWhereAmI, inClusters, inRoistats, inRoistats.averageStatValue=NULL, inRoistats.averageCoefficientValue=NULL,
-                                 inStatColumnName="Default Stat Name", inCoefficientColumnName="Default Coefficient Name", inCom=TRUE) {
-  hemisphere=gsub("[^RL]", "", substr(inClusterWhereAmI, 1, 1))
-  ## print(hemisphere)
-  if ( inCom ) {
-      locations=cbind(gsub("^[RL] ", "", inClusterWhereAmI), hemisphere, round(inClusters[, c("Volume", "CM RL", "CM AP", "CM IS")], 0))
-  } else {
-      locations=cbind(gsub("^[RL] ", "", inClusterWhereAmI), hemisphere, round(inClusters[, c("Volume", "MI RL", "MI AP", "MI IS")], 0))
-  }
+makePublicationTable <- function(inClusterWhereAmI, inClusters, inRoistats,
+                                 inRoistats.averageStatValue=NULL, inRoistats.averageCoefficientValue=NULL, inRoistats.averageBiasValue=NULL,
+                                 inStatColumnName="Default Stat Name", inCoefficientColumnName="Default Coefficient Name", inBiasColumnName="Default Bias Name",
+                                 inCom=TRUE) {
 
-  ## cat("Locations: Volume and coordinates\n")
-  ## print(locations)
+    hemisphere=gsub("[^RL]", "", substr(inClusterWhereAmI, 1, 1))
+    ## print(hemisphere)
+    if ( inCom ) {
+        locations=cbind(gsub("^[RL] ", "", inClusterWhereAmI), hemisphere, round(inClusters[, c("Volume", "CM RL", "CM AP", "CM IS")], 0))
+    } else {
+        locations=cbind(gsub("^[RL] ", "", inClusterWhereAmI), hemisphere, round(inClusters[, c("Volume", "MI RL", "MI AP", "MI IS")], 0))
+    }
 
-  if (length(grep("Mean", colnames(inRoistats))) == 0 ) {
-      stop("*** Cat there are no columns in the inRoistats data fram e that begin with Mean_\n")
-  }
-  
-  ## cat ("Columns matching Mean: ", grep("Mean", colnames(inRoistats)), "\n")
-  ## cat ("Data from the above columns:\n")
-  ## print(inRoistats[, grep("Mean", colnames(inRoistats))])
-  ## print(list(inRoistats$Group))
-  agg=aggregate(inRoistats[, grep("Mean", colnames(inRoistats))], list(inRoistats$Group), mean)
-  ## cat("agg: mean for each group in each ROI\n")  
-  ## print(agg)
-  mns=round(t(agg[, -1]), 2)
-  ## cat("mns: transposed mean for each group in each ROI\n")    
-  colnames(mns)=levels(agg[,1])
-  ## print(mns)
+    ## cat("Locations: Volume and coordinates\n")
+    ## print(locations)
 
-  ## cat("inRoistats.averageStatValue\n")
-  ## print (inRoistats.averageStatValue)
-  if (! is.null(inRoistats.averageStatValue) ) {
-      ## cat("Adding average t stats\n")
-      pubTable=cbind(locations, round(t(inRoistats.averageStatValue), 2))
-      ## print(pubTable)
-  } else {
-      pubTable=cbind(locations, mns)
-  }
+    if (length(grep("Mean", colnames(inRoistats))) == 0 ) {
+        stop("*** Cat there are no columns in the inRoistats data fram e that begin with Mean_\n")
+    }
+    
+    ## cat ("Columns matching Mean: ", grep("Mean", colnames(inRoistats)), "\n")
+    ## cat ("Data from the above columns:\n")
+    ## print(inRoistats[, grep("Mean", colnames(inRoistats))])
+    ## print(list(inRoistats$Group))
+    agg=aggregate(inRoistats[, grep("Mean", colnames(inRoistats))], list(inRoistats$Group), mean)
+    ## cat("agg: mean for each group in each ROI\n")  
+    ## print(agg)
+    mns=round(t(agg[, -1]), 2)
+    ## cat("mns: transposed mean for each group in each ROI\n")    
+    colnames(mns)=levels(agg[,1])
+    ## print(mns)
 
-  if (! is.null(inRoistats.averageStatValue) & ! is.null(inRoistats.averageCoefficientValue) ) {
-      ## cat("Adding average coefficient values\n")      
-      pubTable=cbind(pubTable, round(t(inRoistats.averageCoefficientValue), 2))
-      ## print(pubTable)      
-  }
+    ## cat("inRoistats.averageStatValue\n")
+    ## print (inRoistats.averageStatValue)
+    if (! is.null(inRoistats.averageStatValue) ) {
+        ## cat("Adding average t stats\n")
+        pubTable=cbind(locations, round(t(inRoistats.averageStatValue), 2))
+        colnames(pubTable) = c("Structure", "Hemisphere", "Volume", "CM RL", "CM AP", "CM IS", inStatColumnName)
+        ## print(pubTable)
+    } else {
+        pubTable=locations
+        colnames(pubTable) = c("Structure", "Hemisphere", "Volume", "CM RL", "CM AP", "CM IS")        
+    }
 
-  pubTable=cbind(pubTable, mns)
-  if (! is.null(inRoistats.averageStatValue) ) {
-      colnames(pubTable)=
-          c("Structure", "Hemisphere", "Volume", "CM RL", "CM AP", "CM IS", inStatColumnName, colnames(mns))
-  } else {
-      colnames(pubTable)=c("Structure", colnames(pubTable)[-1])
-  }
+    if (! is.null(inRoistats.averageStatValue) & ! is.null(inRoistats.averageCoefficientValue) ) {
+        ## cat("Adding average coefficient values\n")      
+        pubTable=cbind(pubTable, round(t(inRoistats.averageCoefficientValue), 2))
+        colnames(pubTable)[dim(pubTable)[2]] = inCoefficientColumnName
+        ## print(pubTable)      
+    }
 
-  if (! is.null(inRoistats.averageStatValue) & ! is.null(inRoistats.averageCoefficientValue) ) {
-      colnames(pubTable)=
-          c("Structure", "Hemisphere", "Volume", "CM RL", "CM AP", "CM IS", inStatColumnName, inCoefficientColumnName, colnames(mns))
-  }
-  
-  rownames(pubTable)=NULL
-  ## print(pubTable)
-  return(pubTable)
+    ## only add the bias column if the stats and coefficient arguments are also not null
+    if (! is.null(inRoistats.averageStatValue) & ! is.null(inRoistats.averageCoefficientValue) & ! is.null (inRoistats.averageBiasValue) ) {
+        pubTable=cbind(pubTable, round(t(inRoistats.averageBiasValue), 4))
+        colnames(pubTable)[dim(pubTable)[2]] = inBiasColumnName
+    }
+
+    pubTable=cbind(pubTable, mns)
+    
+    rownames(pubTable)=NULL
+    ## print(pubTable)
+    return(pubTable)
 }
 
 
@@ -325,10 +326,10 @@ replaceNa <- function (inData, inColumns, inSubjectColumnName="ID", inGroupColum
 } ## end of checkIsNa
 
 
-generateGraphs <- function (group.data.dir, group.results.dir, rvVariable, rvName, publicationTableFilename, seed.list) {
+generateGraphs <- function (group.data.dir, group.results.dir, rvVariable, rvName, publicationTableFilename, seed.list, bootstrapped=FALSE) {
 
 
-    if (groups == "mddAndCtrl" & grepl("diff", rvVariable)) {
+    if (groups == "mddAndCtrl" && grepl("diff", rvVariable)) {
         print("*** You are trying to regress/graph  the control and MDD subjects aagainst a time A to C difference. you cannot do that!\n")
         return()
     }
@@ -346,7 +347,11 @@ generateGraphs <- function (group.data.dir, group.results.dir, rvVariable, rvNam
         roistats.filename=file.path(group.results.dir, sprintf("roiStats.%s.txt", infix))
         roistats.averageTvalue.filename=file.path(group.results.dir, sprintf("roiStats.%s.averageTValue.txt", infix))
         roistats.averageCoefficientValue.filename=file.path(group.results.dir, sprintf("roiStats.%s.averageCoefficientValue.txt", infix))
+        if (bootstrapped) {
+            roistats.averageBiasValue.filename=file.path(group.results.dir, sprintf("roiStats.%s.averageBiasValue.txt", infix))
+        }
 
+            
         if(file.exists(roistats.filename)) {
             
             ## roistats contains the avergae from the contrast in each ROI,
@@ -355,10 +360,14 @@ generateGraphs <- function (group.data.dir, group.results.dir, rvVariable, rvNam
             roistats=readStatsTable(roistats.filename)
             roistats.averageTvalue=readStatsTable(roistats.averageTvalue.filename)
             roistats.averageCoefficientValue=readStatsTable(roistats.averageCoefficientValue.filename)
-
+            if (bootstrapped)
+                roistats.averageBiasValue=readStatsTable(roistats.averageBiasValue.filename)
+            
             roistats$Sub.brick=NULL
             roistats.averageTvalue$Sub.brick=NULL
-            roistats.averageCoefficientValue$Sub.brick=NULL                
+            roistats.averageCoefficientValue$Sub.brick=NULL
+            if (bootstrapped)
+                roistats.averageBiasValue$Sub.brick=NULL
             
             clusterCount=length(grep("Mean", colnames(roistats)))
             if (clusterCount > 0 ) {
@@ -439,8 +448,21 @@ generateGraphs <- function (group.data.dir, group.results.dir, rvVariable, rvNam
 
                 ## print(head(mgd))
                 ## stop("Check the mgd data frame\n")
-                publicationTable=makePublicationTable(clusterWhereAmI, clusters, mgd, roistats.averageTvalue, roistats.averageCoefficientValue,
-                    inStatColumnName="Average t value", inCoefficientColumnName="Average Coefficient Value", inCom=TRUE)
+                if (bootstrapped) {
+                    publicationTable=makePublicationTable(clusterWhereAmI, clusters, mgd,
+                        inRoistats.averageStatValue=roistats.averageTvalue,
+                        inRoistats.averageCoefficientValue=roistats.averageCoefficientValue,
+                        inRoistats.averageBiasValue=roistats.averageBiasValue,
+                        inStatColumnName="Average t value",
+                        inCoefficientColumnName="Average Coefficient Value",
+                        inBiasColumnName="Average Bias Value",
+                        inCom=TRUE)
+                } else {
+                    publicationTable=makePublicationTable(clusterWhereAmI, clusters, mgd,
+                        inRoistats.averageStatValue=roistats.averageTvalue, inRoistats.averageCoefficientValue=roistats.averageCoefficientValue,
+                        inStatColumnName="Average t value", inCoefficientColumnName="Average Coefficient Value",
+                        inCom=TRUE)
+                }
                 savePublicationTable(publicationTable, publicationTableFilename, TRUE)
 
                 print(publicationTable)
@@ -468,12 +490,12 @@ generateGraphs <- function (group.data.dir, group.results.dir, rvVariable, rvNam
                     labels=paste(sprintf("%02d", seq(1, clusterCount)), clusterWhereAmI))
 
                 ## print (head((melted.mgd)))
-                ##print(levels(mgd$Treatment))
+                ## print(levels(mgd$Treatment))
 
                 ## print(mgd)
                 ## stop("Check the melted mgd data frame\n")
                 
-                graphRegressions(melted.mgd, group.results.dir, graph.variable, rvName, seedName, indicate.treatments=FALSE)
+                ## graphRegressions(melted.mgd, group.results.dir, graph.variable, rvName, seedName, indicate.treatments=FALSE)
                 
             } ## end of if (clusterCount > 0 ) {
         } else {
@@ -536,12 +558,12 @@ graphRegressions <- function(melted.mgd, group.results.dir, rvVariable, rvName, 
         ## print(sub("Tx", "Treatment", sub("Info", "Information", levels(melted.mgd$Treatment), fixed=TRUE), fixed=TRUE))
 
         graph=ggplot(ss, aes_string(x=x.axis, y=y.axis, label="subject")) +
-            stat_smooth(method="rlm", se=FALSE, color="black") +
+            ## stat_smooth(method="rlm", se=FALSE, color="black") +
                 labs(title = substituteShortLabels(level), x=x.axis.label, y=y.axis.label) +
                     my_theme
-        ## if (grepl("\\.reversed$", group.results.dir)) {
-        ##     graph=graph + scale_y_continuous(labels = percent)
-        ## } else { 
+        if (grepl("scaled", group.results.dir, fixed=TRUE)) {
+            graph=graph + scale_y_continuous(labels = percent)
+        } ## else { 
         ##     graph=graph + scale_x_continuous(labels = percent)
         ## }
 
@@ -649,10 +671,14 @@ regressionVariables=list(
     ## list(variable="CDRS.t.score.scaled.diff",      name="Children's Depression\nRating Scale\n(Baseline to 3 Months Change)")#,
 
     ## list(variable="CDRS.t.score.scaled",           name="Children's Depression\nRating Scale (Baseline)"),
-    list(variable="CDRS.t.score",                     name="Children's Depression\nRating Scale (Baseline)")#,    
-    
+
+    ## baseline 
+    ## list(variable="CDRS.t.score",                     name="Children's Depression\nRating Scale (Baseline)"),    
+
+    ## predictive regressions
     ## list(variable="CDRS.t.score.scaled.diff",      name=expression(paste(Delta, " CDRS-R")))#,
-    ## list(variable="CDRS.t.score.rstandard",        name="CDRS-R Residual")#,
+
+    list(variable="CDRS.t.score.rstandard",        name="CDRS-R Residual")#,
 
     ## list(variable="CDRS.t.score.both.scaled",         name="Follow-up CDRS-R")#,    
     ## list(variable="CDRS.t.score.both",                name="Follow-up CDRS-R")#,
@@ -727,7 +753,7 @@ for (seedFile in seedFiles) {
         ##     file.remove(publicationTableFilename)
         ## }
 
-        generateGraphs(group.data.dir, group.results.dir, rvVariable, rvName, publicationTableFilename, seeds)
+        generateGraphs(group.data.dir, group.results.dir, rvVariable, rvName, publicationTableFilename, seeds, bootstrapped=TRUE)
 
         regressionCount=regressionCount+1
     } ## end of for ( regressionVariableCount in 1:length(regressionVariables ) ) {
