@@ -16,3 +16,8 @@ Thumbs.db
 .3dLME.dbg.AFNI.args
 .rPkgsInstall.dbg.AFNI.args
 .Rproj.user
+
+## automatically generated scripts
+run/
+multipleParallBootedRegressions-TaskFile
+multipleParallBootedRegressions.o*
