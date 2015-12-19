@@ -135,6 +135,7 @@ computeAge <- function(inData) {
 
 find.usable.subjects <- function (in.data, in.column.name) {
 
+    print (colnames(in.data))
     ss=subset(in.data, select=c("ID", "timepoint", "Grp", "age.in.years", in.column.name))
     rownames(ss)=NULL
     
@@ -171,8 +172,8 @@ save.usable.subjects <- function (in.usable.subjects.list, in.variable, in.timep
 
     }
     
-    ncl.list.filename=file.path(config.data.dir, paste("new.ncl.subjectList.with", in.variable, "AandC.txt", sep="."))
-    mdd.list.filename=file.path(config.data.dir, paste("new.mdd.subjectList.with", in.variable, "AandC.txt", sep="."))
+    ncl.list.filename=file.path(config.data.dir, paste("new.ncl.subjectList.with", in.variable, ".withMedicated.AandC.txt", sep="."))
+    mdd.list.filename=file.path(config.data.dir, paste("new.mdd.subjectList.with", in.variable, ".withMedicated.AandC.txt", sep="."))
 
     ## ncl.list=remove.timepoint.indicator(in.usable.subjects.list[in.usable.subjects.list$Grp=="NCL", "ID"])
     ## mdd.list=remove.timepoint.indicator(in.usable.subjects.list[in.usable.subjects.list$Grp=="MDD", "ID"])
@@ -193,11 +194,36 @@ save.usable.subjects <- function (in.usable.subjects.list, in.variable, in.timep
 
 save.usable.subjects.change.scores <- function (in.usable.subjects.list, in.variable, in.timepoint=NULL) {
 
-    ncl.list.filename=file.path(admin.data.dir, sprintf("new.ncl.%s.change.score.csv", in.variable))
-    mdd.list.filename=file.path(admin.data.dir, sprintf("new.mdd.%s.change.score.csv", in.variable))
+    ## ncl.list.filename=file.path(admin.data.dir, sprintf("new.ncl.%s.change.score.csv", in.variable))
+    ## mdd.list.filename=file.path(admin.data.dir, sprintf("new.mdd.%s.change.score.csv", in.variable))
+    ncl.list.filename=file.path(admin.data.dir, sprintf("new.ncl.%s.score.withMedicated.csv", in.variable))
+    mdd.list.filename=file.path(admin.data.dir, sprintf("new.mdd.%s.score.withMedicated.csv", in.variable))
 
-    ncl.list=in.usable.subjects.list[in.usable.subjects.list$Grp=="NCL", c("ID", "Grp", "age.in.years", colnames(in.usable.subjects.list)[grep("diff", colnames(sl), fixed=TRUE)])]
-    mdd.list=in.usable.subjects.list[in.usable.subjects.list$Grp=="MDD", c("ID", "Grp", "age.in.years", colnames(in.usable.subjects.list)[grep("diff", colnames(sl), fixed=TRUE)])]
+    ncl.list=in.usable.subjects.list[in.usable.subjects.list$Grp=="NCL", c("ID", "Grp", "age.in.years", "age.in.years.scaled", colnames(in.usable.subjects.list)[grep(in.variable, colnames(in.usable.subjects.list), fixed=TRUE)])]
+    mdd.list=in.usable.subjects.list[in.usable.subjects.list$Grp=="MDD", c("ID", "Grp", "age.in.years", "age.in.years.scaled", colnames(in.usable.subjects.list)[grep(in.variable, colnames(in.usable.subjects.list), fixed=TRUE)])]
+
+    if (! is.null(in.timepoint) ) {
+        ncl.list$ID = paste(ncl.list$ID, in.timepoint, sep="_")
+        mdd.list$ID = paste(mdd.list$ID, in.timepoint, sep="_")        
+    }
+   
+    cat("*** Writing NCL list to" , ncl.list.filename, "\n")
+    ## print(ncl.list)
+    write.csv(ncl.list, ncl.list.filename, quote=FALSE, col.names=FALSE, row.names=FALSE)
+    
+    cat("*** Writing MDD list to" , mdd.list.filename, "\n")
+    ## print(mdd.list)
+    write.csv(mdd.list, mdd.list.filename, quote=FALSE, col.names=FALSE, row.names=FALSE)
+}
+
+save.usable.subjects.both.scores <- function (in.usable.subjects.list, in.variable, in.timepoint=NULL) {
+
+    ncl.list.filename=file.path(admin.data.dir, sprintf("new.ncl.%s.both.scores.csv", in.variable))
+    mdd.list.filename=file.path(admin.data.dir, sprintf("new.mdd.%s.both.scores.csv", in.variable))
+
+    rx=paste(gsub(".", "\\.", in.variable, fixed=TRUE), "\\.[AC]", sep="")
+    ncl.list=in.usable.subjects.list[in.usable.subjects.list$Grp=="NCL", c("ID", "Grp", "age.in.years", "age.in.years.scaled", colnames(in.usable.subjects.list)[grep(rx, colnames(in.usable.subjects.list), fixed=FALSE)])]
+    mdd.list=in.usable.subjects.list[in.usable.subjects.list$Grp=="MDD", c("ID", "Grp", "age.in.years", "age.in.years.scaled", colnames(in.usable.subjects.list)[grep(rx, colnames(in.usable.subjects.list), fixed=FALSE)])]
 
     if (! is.null(in.timepoint) ) {
         ncl.list$ID = paste(ncl.list$ID, in.timepoint, sep="_")
@@ -249,134 +275,13 @@ save.timepoint.a.subjects.scores <- function (in.usable.subjects.list, in.variab
 }
 
 
-save.usable.subjects <- function (in.data, in.variable) {
-    filename=file.path(admin.data.dir, sprintf("new.%s.timepoint.a.and.c.score.csv", in.variable))
-    cat(sprintf("*** Writing usable subjects for the %s variable list to %s\n" , in.variable, filename))
-    ## print(in.data)
-    write.csv(in.data, filename, quote=FALSE, col.names=FALSE, row.names=FALSE)
+## save.usable.subjects <- function (in.data, in.variable) {
+##     filename=file.path(admin.data.dir, sprintf("new.%s.timepoint.a.and.c.score.csv", in.variable))
+##     cat(sprintf("*** Writing usable subjects for the %s variable list to %s\n" , in.variable, filename))
+##     ## print(in.data)
+##     write.csv(in.data, filename, quote=FALSE, col.names=FALSE, row.names=FALSE)
 
-}
-## new.analyse <- function (in.data, y.axis, na.action="na.omit") {
-
-##     cat("####################################################################################################\n")
-##     cat("### Analysis of", y.axis, "\n")
-
-##     cat("### Summary of", y.axis, "\n")
-##     print(summarySE(in.data, measure=y.axis, groupvars=c("Grp")))
-##     print(summarySE(in.data, measure=y.axis, groupvars=c("timepoint")))
-##     smry=summarySE(in.data, measure=y.axis, groupvars=c("Grp", "timepoint"))
-##     print(smry)
-##     cat(make.table.strings(smry, y.axis))
-##     cat("\n")
-
-##     cat("### Table of n\n")
-##     print(with(in.data, addmargins(table(Grp, timepoint))))
-
-##     ## setup the formulae used in the models
-##     model.formula.nointeraction=as.formula(paste(y.axis, "~", "Grp + timepoint"))
-##     model.formula.interaction=as.formula(paste(y.axis, "~", "Grp * timepoint"))    
-##     random.formula=as.formula("~ 1 | ID")
-
-##     in.data=in.data[complete.cases(in.data), ]
-
-##     ss.in.data = subset(in.data, Grp=="MDD")
-##     print(t.test(ss.in.data[ss.in.data$timepoint=="A", y.axis], ss.in.data[ss.in.data$timepoint=="C", y.axis], paired=TRUE))
-
-##     ## setup the LME models and ANOVAs derived therefrom
-##     model.lme.interaction=lme(data=in.data, fixed=model.formula.interaction, random=random.formula)
-##     ## print(model.lme.interaction)
-##     model.lme.nointeraction=lme(data=in.data, fixed=model.formula.nointeraction, random=random.formula)
-##     ## print(model.lme.nointeraction)
-##     model.anova.interaction=anova(model.lme.interaction)
-##     model.anova.nointeraction=anova(model.lme.nointeraction)
-
-##     cat("\n### Interaction LME summary\n")
-##     print(summary(model.lme.interaction))
-##     cat("\n### Nointeraction LME summary\n")
-##     print(summary(model.lme.nointeraction))    
-
-##     cat("\n### Interaction ANOVA summary\n")
-##     print(model.anova.interaction)
-##     cat("\n### Nointeraction ANOVA summary\n")
-##     print(model.anova.nointeraction)
-
-##     use.interaction.model=FALSE
-##     if (model.anova.interaction[4, "p-value"] < 0.05) {
-##         use.interaction.model=TRUE
-##         cat("\n")
-##         cat("**************************************************************\n")
-##         cat("*** The Grp * timepoint is significant: using interation model\n")
-##         cat("**************************************************************\n")
-##     }
-
-    
-##     ## ## original from
-##     ## ## http://cran.r-project.org/web/packages/multcomp/vignettes/multcomp-examples.pdf
-##     ## ## mod <- lm(breaks ~ wool * tension, data = warpbreaks)
-##     ## ## tmp <- expand.grid(tension = unique(warpbreaks$tension), wool = unique(warpbreaks$wool))
-##     ## ## X <- model.matrix(~ wool * tension, data = tmp)
-##     ## ## glht(mod, linfct = X)
-##     ## ## Tukey <- contrMat(table(warpbreaks$tension), "Tukey")
-##     ## ## K1 <- cbind(Tukey, matrix(0, nrow = nrow(Tukey), ncol = ncol(Tukey)))
-##     ## ## rownames(K1) <- paste(levels(warpbreaks$wool)[1], rownames(K1), sep = ":")
-##     ## ## K2 <- cbind(matrix(0, nrow = nrow(Tukey), ncol = ncol(Tukey)), Tukey)
-##     ## ## rownames(K2) <- paste(levels(warpbreaks$wool)[2], rownames(K2), sep = ":")
-##     ## ## K <- rbind(K1, K2)
-##     ## ## colnames(K) <- c(colnames(Tukey), colnames(Tukey))
-##     ## ## ## and perform the tests via
-##     ## ## summary(glht(mod, linfct = K %*% X))
-    
-##     if (use.interaction.model==FALSE) {
-##         cat("### Main effects in nointeraction model\n")
-##         assign("model.formula.nointeraction", model.formula.nointeraction, envir=.GlobalEnv)
-##         K1 <- glht(model.lme.nointeraction, mcp(Grp = "Tukey"))$linfct
-##         K2 <- glht(model.lme.nointeraction, mcp(timepoint = "Tukey"))$linfct
-##         print(summary(glht(model.lme.nointeraction, linfct = rbind(K1, K2))))
-##         remove("model.formula.nointeraction", envir=.GlobalEnv)        
-##     }
-
-##     if (use.interaction.model==TRUE) {
-##         cat("### Interaction effects\n")
-##         tmp <- expand.grid(timepoint = unique(in.data$timepoint), Grp = unique(in.data$Grp))
-##         X.a <- model.matrix(~ Grp * timepoint, data = tmp)
-##         ## print(glht(model.lme, linfct = X.a))
-##         Tukey.a <- contrMat(table(in.data$timepoint), "Tukey")
-##         Ka1 <- cbind(Tukey.a, matrix(0, nrow = nrow(Tukey.a), ncol = ncol(Tukey.a)))
-##         rownames(Ka1) <- paste(levels(in.data$Grp)[1], rownames(Ka1), sep = ":")
-##         Ka2 <- cbind(matrix(0, nrow = nrow(Tukey.a), ncol = ncol(Tukey.a)), Tukey.a)
-##         rownames(Ka2) <- paste(levels(in.data$Grp)[2], rownames(Ka2), sep = ":")
-##         K.a <- rbind(Ka1, Ka2)
-##         colnames(K.a) <- c(colnames(Tukey.a), colnames(Tukey.a))
-
-##         print(summary(glht(model.lme.interaction, linfct = K.a %*% X.a)))
-
-
-##         ##tmp <- expand.grid(Grp = unique(in.data$Grp), timepoint = unique(in.data$timepoint))
-##         X.b <- model.matrix(~ timepoint * Grp, data = tmp)
-##         ## print(glht(model.lme, linfct = X.b))
-##         Tukey.b <- contrMat(table(in.data$Grp), "Tukey")
-##         Kb1 <- cbind(Tukey.b, matrix(0, nrow = nrow(Tukey.b), ncol = ncol(Tukey.b)))
-##         rownames(Kb1) <- paste(levels(in.data$timepoint)[1], rownames(Kb1), sep = ":")
-##         Kb2 <- cbind(matrix(0, nrow = nrow(Tukey.b), ncol = ncol(Tukey.b)), Tukey.b)
-##         rownames(Kb2) <- paste(levels(in.data$timepoint)[2], rownames(Kb2), sep = ":")
-##         K.b <- rbind(Kb1, Kb2)
-##         colnames(K.b) <- c(colnames(Tukey.b), colnames(Tukey.b))
-##         ## and perform the tests via
-##         print(summary(glht(model.lme.interaction, linfct = K.b %*% X.b)))
-
-##         assign("in.data", in.data, envir=.GlobalEnv)
-##         assign("model.formula.interaction", model.formula.interaction, envir=.GlobalEnv)
-        
-##         cat("*** Tables of means\n")
-##         print(allEffects(model.lme.interaction, formula=model.formula.interaction))
-
-##         remove("model.formula.interaction", envir=.GlobalEnv)
-##         remove("in.data", envir=.GlobalEnv)
-##     }
-
-##     return(smry)
 ## }
-
 
 change.score.analyse <- function (in.subjects.lists, in.sl, y.axis, na.action="na.omit") {
 
@@ -597,6 +502,129 @@ scale.variable <- function(in.subjects.lists, in.variable) {
     return(in.subjects.lists)
 }    
 
+
+
+new.analyse <- function (in.data, y.axis, na.action="na.omit") {
+
+    cat("####################################################################################################\n")
+    cat("### Analysis of", y.axis, "\n")
+
+    cat("### Summary of", y.axis, "\n")
+    print(summarySE(in.data, measure=y.axis, groupvars=c("Grp")))
+    print(summarySE(in.data, measure=y.axis, groupvars=c("timepoint")))
+    smry=summarySE(in.data, measure=y.axis, groupvars=c("Grp", "timepoint"))
+    print(smry)
+    cat(make.table.strings(smry, y.axis))
+    cat("\n")
+
+    cat("### Table of n\n")
+    print(with(in.data, addmargins(table(Grp, timepoint))))
+
+    ## setup the formulae used in the models
+    model.formula.nointeraction=as.formula(paste(y.axis, "~", "Grp + timepoint"))
+    model.formula.interaction=as.formula(paste(y.axis, "~", "Grp * timepoint"))    
+    random.formula=as.formula("~ 1 | ID")
+
+    in.data=in.data[complete.cases(in.data), ]
+
+    ss.in.data = subset(in.data, Grp=="MDD")
+    print(t.test(ss.in.data[ss.in.data$timepoint=="A", y.axis], ss.in.data[ss.in.data$timepoint=="C", y.axis], paired=TRUE))
+
+    ## setup the LME models and ANOVAs derived therefrom
+    model.lme.interaction=lme(data=in.data, fixed=model.formula.interaction, random=random.formula, correlation=corAR1(form=random.formula))
+    ## print(model.lme.interaction)
+    model.lme.nointeraction=lme(data=in.data, fixed=model.formula.nointeraction, random=random.formula, correlation=corAR1(form=random.formula))
+    ## print(model.lme.nointeraction)
+    model.anova.interaction=anova(model.lme.interaction)
+    model.anova.nointeraction=anova(model.lme.nointeraction)
+
+    cat("\n### Interaction LME summary\n")
+    print(summary(model.lme.interaction))
+    cat("\n### Nointeraction LME summary\n")
+    print(summary(model.lme.nointeraction))    
+
+    cat("\n### Interaction ANOVA summary\n")
+    print(model.anova.interaction)
+    cat("\n### Nointeraction ANOVA summary\n")
+    print(model.anova.nointeraction)
+
+    use.interaction.model=TRUE
+    ## if (model.anova.interaction[4, "p-value"] < 0.05) {
+    ##     use.interaction.model=TRUE
+    ##     cat("\n")
+    ##     cat("**************************************************************\n")
+    ##     cat("*** The Grp * timepoint is significant: using interation model\n")
+    ##     cat("**************************************************************\n")
+    ## }
+
+    
+    ## ## original from
+    ## ## http://cran.r-project.org/web/packages/multcomp/vignettes/multcomp-examples.pdf
+    ## ## mod <- lm(breaks ~ wool * tension, data = warpbreaks)
+    ## ## tmp <- expand.grid(tension = unique(warpbreaks$tension), wool = unique(warpbreaks$wool))
+    ## ## X <- model.matrix(~ wool * tension, data = tmp)
+    ## ## glht(mod, linfct = X)
+    ## ## Tukey <- contrMat(table(warpbreaks$tension), "Tukey")
+    ## ## K1 <- cbind(Tukey, matrix(0, nrow = nrow(Tukey), ncol = ncol(Tukey)))
+    ## ## rownames(K1) <- paste(levels(warpbreaks$wool)[1], rownames(K1), sep = ":")
+    ## ## K2 <- cbind(matrix(0, nrow = nrow(Tukey), ncol = ncol(Tukey)), Tukey)
+    ## ## rownames(K2) <- paste(levels(warpbreaks$wool)[2], rownames(K2), sep = ":")
+    ## ## K <- rbind(K1, K2)
+    ## ## colnames(K) <- c(colnames(Tukey), colnames(Tukey))
+    ## ## ## and perform the tests via
+    ## ## summary(glht(mod, linfct = K %*% X))
+    
+    if (use.interaction.model==FALSE) {
+        cat("### Main effects in nointeraction model\n")
+        assign("model.formula.nointeraction", model.formula.nointeraction, envir=.GlobalEnv)
+        K1 <- glht(model.lme.nointeraction, mcp(Grp = "Tukey"))$linfct
+        K2 <- glht(model.lme.nointeraction, mcp(timepoint = "Tukey"))$linfct
+        print(summary(glht(model.lme.nointeraction, linfct = rbind(K1, K2))))
+        remove("model.formula.nointeraction", envir=.GlobalEnv)        
+    }
+
+    if (use.interaction.model==TRUE) {
+        cat("### Interaction effects\n")
+        tmp <- expand.grid(timepoint = unique(in.data$timepoint), Grp = unique(in.data$Grp))
+        X.a <- model.matrix(~ Grp * timepoint, data = tmp)
+        ## print(glht(model.lme, linfct = X.a))
+        Tukey.a <- contrMat(table(in.data$timepoint), "Tukey")
+        Ka1 <- cbind(Tukey.a, matrix(0, nrow = nrow(Tukey.a), ncol = ncol(Tukey.a)))
+        rownames(Ka1) <- paste(levels(in.data$Grp)[1], rownames(Ka1), sep = ":")
+        Ka2 <- cbind(matrix(0, nrow = nrow(Tukey.a), ncol = ncol(Tukey.a)), Tukey.a)
+        rownames(Ka2) <- paste(levels(in.data$Grp)[2], rownames(Ka2), sep = ":")
+        K.a <- rbind(Ka1, Ka2)
+        colnames(K.a) <- c(colnames(Tukey.a), colnames(Tukey.a))
+
+        print(summary(glht(model.lme.interaction, linfct = K.a %*% X.a)))
+
+
+        ##tmp <- expand.grid(Grp = unique(in.data$Grp), timepoint = unique(in.data$timepoint))
+        X.b <- model.matrix(~ timepoint * Grp, data = tmp)
+        ## print(glht(model.lme, linfct = X.b))
+        Tukey.b <- contrMat(table(in.data$Grp), "Tukey")
+        Kb1 <- cbind(Tukey.b, matrix(0, nrow = nrow(Tukey.b), ncol = ncol(Tukey.b)))
+        rownames(Kb1) <- paste(levels(in.data$timepoint)[1], rownames(Kb1), sep = ":")
+        Kb2 <- cbind(matrix(0, nrow = nrow(Tukey.b), ncol = ncol(Tukey.b)), Tukey.b)
+        rownames(Kb2) <- paste(levels(in.data$timepoint)[2], rownames(Kb2), sep = ":")
+        K.b <- rbind(Kb1, Kb2)
+        colnames(K.b) <- c(colnames(Tukey.b), colnames(Tukey.b))
+        ## and perform the tests via
+        print(summary(glht(model.lme.interaction, linfct = K.b %*% X.b)))
+
+        assign("in.data", in.data, envir=.GlobalEnv)
+        assign("model.formula.interaction", model.formula.interaction, envir=.GlobalEnv)
+        
+        cat("*** Tables of means\n")
+        print(allEffects(model.lme.interaction, formula=model.formula.interaction))
+
+        remove("model.formula.interaction", envir=.GlobalEnv)
+        remove("in.data", envir=.GlobalEnv)
+    }
+
+    return(smry)
+}
+
 ##########################################################################################################################################################################
 ### END OF FUNCTIONS #####################################################################################################################################################
 ##########################################################################################################################################################################
@@ -617,6 +645,8 @@ scripts.dir=file.path(root.dir, "sanDiego/rsfcGraphAnalysis/scripts")
 data.dir=file.path(root.dir, "sanDiego/rsfcGraphAnalysis/data/")
 admin.data.dir=file.path(data.dir, "admin")
 config.data.dir=file.path(data.dir, "config")
+## group.data.dir=file.path(data.dir, "Group.data.withMedicated")
+## group.results.dir=file.path(data.dir, "Group.results.withMedicated")
 group.data.dir=file.path(data.dir, "Group.data")
 group.results.dir=file.path(data.dir, "Group.results")
 seeds.data.dir=file.path(data.dir, "seeds")
@@ -638,7 +668,7 @@ mgd=computeAge(mgd)
 ## not load the subject order file, this serves as the master list of
 ## subjects to start with
 
-seed.name="L_BLA.weight.3mm"
+seed.name="L_whole_amygdala.3mm"
 subjectOrder.filename=file.path(group.data.dir, paste("subjectOrder.mddAndCtrl", seed.name, "csv", sep="."))
 cat("Reading list of MDD and CONTROLs subject in the bucket file: ", subjectOrder.filename, "\n")
 subjectList=read.csv(subjectOrder.filename, header=TRUE)
@@ -646,10 +676,16 @@ subjectList=read.csv(subjectOrder.filename, header=TRUE)
 subjectList=splitSubjectOrderIntoIdAndTimepoint(subjectList)
 subjectList=fixSubjectIds(subjectList, "id")
 
+## we're missing the CGAS score for 136_C but for some reason it's
+## entered as 0 rather than NA, so fix that
+mgd[mgd$ID==136, "CGAS"]=NA
+
 
 ## for (variable in c("CGAS", "CDRS.t.score", "MASC.tscore", "RADS.Total.tscore") ) {
-for (variable in c("CDRS.t.score") ) {    
-
+## for (variable in c("CGAS") ) {    
+#for (variable in c("CDRS.t.score") ) {
+for (variable in c("BDI.II.Total") ) {
+    cat("########################################################################################################################################################################################################\n")
     cat("*** Computing usable subjects for", variable, "\n")
 
     ss=subset(mgd, select=c("ID", "timepoint", "Grp", "age.in.years", variable))
@@ -668,12 +704,17 @@ for (variable in c("CDRS.t.score") ) {
     print(addmargins(table(sl$Grp)))
     cat("*** The following subjects are usable for", variable, ":\n")
     print.usable.subjects(sl)
+    sl = scale.variable(sl, c("age.in.years", paste(variable, c("A", "C"), sep=".")))
+    
     ## save.usable.subjects(sl, variable, in.timepoint="A")
 
     ## save.usable.subjects.change.scores(sl, paste(variable, "diff", sep="."))
-
-    ## save.usable.subjects.residualized.scores(sl, paste(variable, "rstandard", sep="."))
+    ## save.usable.subjects.change.scores(sl, variable)
     
+    ## save.usable.subjects.residualized.scores(sl, paste(variable, "rstandard", sep="."))
+
+    ## save.usable.subjects.both.scores(sl, variable)    
+
     ## variable.summary=new.analyse(subjects.lists[["usable.long"]], variable)
 
     ## cat("*** subjects.lists\n")
@@ -729,3 +770,4 @@ for (variable in c("CDRS.t.score") ) {
 
 ## ## print(bdi)
 ## ## print(bdi.long)
+
