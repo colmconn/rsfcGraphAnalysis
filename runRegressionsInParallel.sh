@@ -11,7 +11,11 @@ RSFC_ROOT=/data/sanDiego
 
 ##regressionVariables="CGAS BDI.II.Total CDRS.t.score MASC.tscore CDI.Total RADS.Total.tscore"
 
-regressionVariables="CDRS.t.score"
+##regressionVariables="CDRS.t.score"
+
+regressionVariables="CDRS.t.score.rstandard.short"
+
+
 
 date
 
@@ -67,17 +71,22 @@ cd $RSFC_ROOT/$taskDir/scripts
 
 ## ./rsfc.parallel.robust.regression.change.r  -e -c new.mdd.${variable}.diff.change.score.csv -v ${variable}.diff -s juelich_amygdala_seeds_weights.txt
 
-./rsfc.parallel.robust.regression.change.r  -c new.mdd.${variable}.scaled.diff.change.score.csv -v ${variable}.scaled.diff -s juelich_amygdala_seeds_weights.txt
+# ./rsfc.parallel.robust.regression.change.r  -c new.mdd.${variable}.scaled.diff.change.score.csv -v ${variable}.scaled.diff -s juelich_amygdala_seeds_weights.txt
+
+./rsfc.parallel.robust.regression.change.r  -b -r 100 -c new.mdd.${variable}.scores.csv   -v ${variable}       -s juelich_left_whole_amygdala_seed.txt
+./rsfc.parallel.robust.regression.change.r  -b -r 100 -c new.mdd.${variable}.scores.csv   -v ${variable}       -s juelich_right_whole_amygdala_seed.txt
 
 EOF
-	chmod +x  run/run-${variable}-regression.sh
+	chmod +x  run/run-${variable}-booted-regression.sh
 	echo $variable
 	## qsub -pe smp 8 \
-	rm -f ../log/${variable}-reversed-regression.log
-	qsub -o ../log/${variable}-reversed-regression.log \
-	     run/run-${variable}-regression.sh
+	rm -f ../log/${variable}-booted-regression.log
+	qsub -o ../log/${variable}-booted-regression.log \
+	     run/run-${variable}-booted-regression.sh
 done
 
 
     
-#./rsfc.parallel.robust.regression.change.r  -c new.mdd.CDRS.t.score.rstandard.score.csv -v CDRS.t.score.rstandard -s juelich_amygdala_seeds_weights.txt
+#./rsfc.parallel.robust.regression.change.r  -c new.mdd.CDRS.t.score.rstandard.score.short.csv    -v CDRS.t.score.rstandard   -s juelich_whole_amygdala_seeds.txt
+#./rsfc.parallel.robust.regression.change.r  -c new.mdd.CDRS.t.score.scaled.diff.change.score.csv -v CDRS.t.score.scaled.diff -s juelich_whole_amygdala_seeds.txt
+#./rsfc.parallel.robust.regression.change.r  -c new.mdd.CDRS.t.score.score.withMedicated.csv      -v CDRS.t.score.scaled.diff -s juelich_whole_amygdala_seeds.txt
