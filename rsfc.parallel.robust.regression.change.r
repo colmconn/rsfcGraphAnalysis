@@ -64,15 +64,15 @@ makeBrikLabels <- function (inRlmCoef, inBoot=FALSE) {
 
 ## make a list of the AFNI brik indices that correspond to the t-stat
 ## from the matrix of coefficients produced by rlm. This take into
-## account that AFN inumbers from 0 not 1
+## account that AFNI numbers from 0 not 1
 makeAfniTtestBrikIds <- function(inRlmCoef, inBoot=FALSE) {
     nrows=length(rownames(inRlmCoef))
     ncols=length(colnames(inRlmCoef))
     
-    indices=seq(3, nrows*ncols, by=3)
+    indices=seq(ncols, nrows*ncols, by=ncols)
 
     if (inBoot) {
-        indices=c(indices, seq(indices[length(indices)]+2, (nrows*ncols) + (nrows*length(bootstrappingBrikLabelSuffxes)), by=4))
+        indices=c(indices, seq(indices[length(indices)] + grep("t.value", bootstrappingBrikLabelSuffxes), (nrows*ncols) + (nrows*length(bootstrappingBrikLabelSuffxes)), by=length(bootstrappingBrikLabelSuffxes)))
     }
     
     return (indices)
@@ -81,8 +81,8 @@ makeAfniTtestBrikIds <- function(inRlmCoef, inBoot=FALSE) {
 ## given a list of AFNI brik indices and a degrees of freedom (inDf)
 ## make an appropriate list of statpar arguments to add to a 3drefit
 ## command line
-makeAfniStatparArguments <- function(inDf, inAfniFtestBrikIds) {
-    return( paste(sapply(inAfniFtestBrikIds, function(x) { sprintf("-substatpar %d fitt %d", x[1], inDf) }), collapse=" ") )
+makeAfniStatparArguments <- function(inDf, inAfniTtestBrikIds) {
+    return( paste(sapply(inAfniTtestBrikIds, function(x) { sprintf("-substatpar %d fitt %d", x[1], inDf) }), collapse=" ") )
 }
 
 cleanRegressionVariable <- function(inName) {
