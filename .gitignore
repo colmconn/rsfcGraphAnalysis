@@ -21,3 +21,4 @@ Thumbs.db
 run/
 multipleParallBootedRegressions-TaskFile
 multipleParallBootedRegressions.o*
+rm.*
