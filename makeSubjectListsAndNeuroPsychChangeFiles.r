@@ -683,8 +683,9 @@ mgd[mgd$ID==136, "CGAS"]=NA
 
 ## for (variable in c("CGAS", "CDRS.t.score", "MASC.tscore", "RADS.Total.tscore") ) {
 ## for (variable in c("CGAS") ) {    
-#for (variable in c("CDRS.t.score") ) {
-for (variable in c("BDI.II.Total") ) {
+## for (variable in c("CDRS.t.score") ) {
+## for (variable in c("BDI.II.Total") ) {
+for (variable in c("MASC.tscore") ) {    
     cat("########################################################################################################################################################################################################\n")
     cat("*** Computing usable subjects for", variable, "\n")
 
@@ -723,6 +724,8 @@ for (variable in c("BDI.II.Total") ) {
     ## print(sl)
 
     usable.time.a=scale.variable(find.usable.timepoint.a.subjects(subjects.lists, "MDD"), variable)
+    usable.time.a=usable.time.a[complete.cases(usable.time.a), ]
+    rownames(usable.time.a) = NULL
 
     ## save.usable.subjects(subjects.lists[["usable.long"]], variable)
                          
