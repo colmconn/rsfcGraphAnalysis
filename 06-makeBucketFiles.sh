@@ -189,11 +189,14 @@ makeBetweenGroupBucketsWithMedcicated=0
 
 makeCdrsrbuckets=0
 makeShortCdrsrbuckets=0
-makeCdrsrbucketsWithMedcicated=1
+makeCdrsrbucketsWithMedcicated=0
 
 makeBdiBuckets=0
 makeCgasBuckets=0
 makeMascBuckets=0
+
+makeBaselineMascBuckets=1
+
 makeCdiBuckets=0
 makeRadsBuckets=0
 
@@ -445,6 +448,28 @@ if [[ $makeMascBuckets == 1 ]] ; then
     maskBuckets ctrlOnly
     maskBuckets mddOnly
 fi
+
+if [[ $makeBaselineMascBuckets == 1 ]] ; then 
+    GROUP_DATA=$DATA/Group.data.MASC.tscore
+    GROUP_RESULTS=$DATA/Group.results.MASC.tscore
+
+    mddSubjects="$( cat ../data/config/new.mdd.subjectList.MASC.tscore.txt )"
+
+    
+    [[ ! -d $GROUP_DATA ]]    && mkdir -p $GROUP_DATA
+    [[ ! -d $GROUP_RESULTS ]] && mkdir -p $GROUP_RESULTS
+
+    makeScaledDataLink $GROUP_DATA
+    
+    makeAutocorrelatedBuckets "mddOnly"  "$mddSubjects"
+
+    makeFwhmFiles "mddOnly"    "$mddSubjects"  $GROUP_DATA
+    
+    ./makeGreyMatterMask.sh $GROUP_DATA $GROUP_RESULTS mddOnly $seedName
+
+    maskBuckets mddOnly
+fi
+
 
 if [[ $makeCdiBuckets == 1 ]] ; then 
     GROUP_DATA=$DATA/Group.data.CDI.Total.diff.withAandC
