@@ -271,8 +271,10 @@ read.change.score.file <- function (in.variable) {
         change.score.filename=file.path(admin.data.dir, sprintf("new.mdd.%s.scores.csv", in.variable))
     else if (baselineOnly)
         change.score.filename=file.path(admin.data.dir, sprintf("new.mdd.%s.timepoint.a.score.csv", in.variable))
-    else
+    else if (grepl("diff", rvVariable, fixed=TRUE))
         change.score.filename=file.path(admin.data.dir, sprintf("new.mdd.%s.change.score.csv", in.variable))
+    else
+        change.score.filename=file.path(admin.data.dir, sprintf("new.mdd.%s.scores.csv", in.variable))        
         ##change.score.filename=file.path(admin.data.dir, sprintf("new.mdd.%s.rstandard.score.csv", in.variable))        
     
     cat("*** Change score file is", change.score.filename, "\n")
@@ -495,7 +497,7 @@ generateGraphs <- function (group.data.dir, group.results.dir, rvVariable, rvNam
                 ## print(mgd)
                 ## stop("Check the melted mgd data frame\n")
                 
-                ## graphRegressions(melted.mgd, group.results.dir, graph.variable, rvName, seedName, indicate.treatments=FALSE)
+                graphRegressions(melted.mgd, group.results.dir, graph.variable, rvName, seedName, indicate.treatments=FALSE)
                 
             } ## end of if (clusterCount > 0 ) {
         } else {
@@ -678,7 +680,7 @@ regressionVariables=list(
     ## predictive regressions
     ## list(variable="CDRS.t.score.scaled.diff",      name=expression(paste(Delta, " CDRS-R")))#,
 
-    list(variable="CDRS.t.score.rstandard",        name="CDRS-R Residual")#,
+    ## list(variable="CDRS.t.score.rstandard",        name="CDRS-R Residual")#,
 
     ## list(variable="CDRS.t.score.both.scaled",         name="Follow-up CDRS-R")#,    
     ## list(variable="CDRS.t.score.both",                name="Follow-up CDRS-R")#,
@@ -690,6 +692,8 @@ regressionVariables=list(
     
     ## list(variable="BDI.II.Total.diff",             name="Beck Depression Inventory II (A to C Change)"),
     ## list(variable="CDI.Total.diff",                name="Children's Depression Inventory (A to C Change)")
+
+    list(variable="BDI.II.Total",             name="Beck Depression Inventory II")    
 )
 
 groups="mddOnly"
