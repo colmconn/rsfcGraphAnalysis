@@ -15,12 +15,16 @@ cat /dev/null > $taskFile
 
 #regressionVariables="CDRS.t.score.rstandard"
 
-regressionVariables="BDI.II.Total"
+# regressionVariables="BDI.II.Total"
+regressionVariables="MASC.tscore"
 for variable in $regressionVariables ; do
 
-    echo "./rsfc.parallel.robust.regression.change.r  -b -r 1000 -c new.mdd.${variable}.scores.csv   -v ${variable}       -s juelich_left_whole_amygdala_seed.txt"  >> ${taskFile}
-    echo "./rsfc.parallel.robust.regression.change.r  -b -r 1000 -c new.mdd.${variable}.scores.csv   -v ${variable}       -s juelich_right_whole_amygdala_seed.txt" >> ${taskFile}
-    
+    ## echo "./rsfc.parallel.robust.regression.change.r  -b -r 1000 -c new.mdd.${variable}.scores.csv   -v ${variable}       -s juelich_left_whole_amygdala_seed.txt"  >> ${taskFile}
+    ## echo "./rsfc.parallel.robust.regression.change.r  -b -r 1000 -c new.mdd.${variable}.scores.csv   -v ${variable}       -s juelich_right_whole_amygdala_seed.txt" >> ${taskFile}
+
+    echo "./rsfc.parallel.robust.regression.change.r  -b -r 1000 -c new.mdd.${variable}.timepoint.a.score.csv   -v ${variable}       -s juelich_left_whole_amygdala_seed.txt"  >> ${taskFile}
+    echo "./rsfc.parallel.robust.regression.change.r  -b -r 1000 -c new.mdd.${variable}.timepoint.a.score.csv   -v ${variable}       -s juelich_right_whole_amygdala_seed.txt" >> ${taskFile}
+
 done
 
 ## jobname
