@@ -51,6 +51,12 @@ mv -f L.sgACC.plusSmallValue.clustered_clp+tlrc.BRIK.gz L.sgACC.mask+tlrc.BRIK.g
 3dcalc -a R.sgACC.mask+tlrc     -b L.sgACC.mask+tlrc     -expr "a+2*b" -prefix sgACC.mask
 3dcalc -a R.sgACC.mask.3mm+tlrc -b L.sgACC.mask.3mm+tlrc -expr "a+2*b" -prefix sgACC.mask.3mm
 
+3dclust -isomerge 0 0  sgACC.mask.3mm+tlrc > clust.sgACC.3mm.txt
+
+ln -sf ../MNI152_T1_1mm.nii.gz
+ln -sf ../MNI152_T1_1mm_brain.nii.gz
+ln -sf ../MNI152_T1_3mm.nii.gz
+
 cd ../
 for side in L R ; do
     for suffix in HEAD BRIK.gz ; do
