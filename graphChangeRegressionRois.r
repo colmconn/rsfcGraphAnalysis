@@ -693,7 +693,8 @@ regressionVariables=list(
     ## list(variable="BDI.II.Total.diff",             name="Beck Depression Inventory II (A to C Change)"),
     ## list(variable="CDI.Total.diff",                name="Children's Depression Inventory (A to C Change)")
 
-    list(variable="BDI.II.Total",             name="Beck Depression Inventory II")    
+    ## list(variable="BDI.II.Total",             name="Beck Depression Inventory II")
+    list(variable="MASC.tscore",              name="Multidimensional Anxiety Scale\nfor Children (Standardized)")    
 )
 
 groups="mddOnly"
@@ -733,7 +734,7 @@ my_theme=
 ##seedFiles=file.path(config.data.dir, "juelich_amygdala_seeds_weights.txt")
 seedFiles=file.path(config.data.dir, "juelich_whole_amygdala_seeds.txt")
 
-baselineOnly=FALSE
+baselineOnly=TRUE
 
 for (seedFile in seedFiles) {
 
@@ -750,7 +751,7 @@ for (seedFile in seedFiles) {
         rvName=regressionVariables[[regressionVariableCount]]$name
 
         group.data.dir=file.path(data.dir, paste("Group.data", rvVariable, sep="."))
-        group.results.dir=file.path(data.dir, paste("Group.results", rvVariable, sep="."))
+        group.results.dir=file.path(data.dir, paste("Group.results", rvVariable, sep="."), "wholeBrain")
         
         publicationTableFilename=file.path(group.results.dir, paste("publicationTable", usedFwhm, groups, "csv", sep="."))
         ## if (file.exists(publicationTableFilename)) {
