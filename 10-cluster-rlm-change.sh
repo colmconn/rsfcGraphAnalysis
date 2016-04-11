@@ -17,7 +17,7 @@ MDD_TISSUEPRIORS=$ROOT/tissuepriors
 scriptsDir=${ROOT}/scripts
 
 logDir=${DATA}/log
-GETOPT_OPTIONS=$( $GETOPT  -o "l:is:n:op:c:es:bv:" --longoptions "seedlist:,useInherentSmoothness,svc:,nn:,overwrite,pvalue:,cpvalue:,cleaned,sided:,booted,variable:" -n ${programName} -- "$@" )
+GETOPT_OPTIONS=$( $GETOPT  -o "l:is:n:op:c:es:bv:r" --longoptions "seedlist:,useInherentSmoothness,svc:,nn:,overwrite,pvalue:,cpvalue:,cleaned,sided:,booted,variable:,noerode" -n ${programName} -- "$@" )
 exitStatus=$?
 if [ $exitStatus != 0 ] ; then 
     echo "Error with getopt. Terminating..." >&2 
@@ -43,6 +43,9 @@ csvFile=regressions.parameters.csv
 ## non-bootstrapped (0) results are used when clustering
 booted=0
 
+## Whether clusters should be eroded adn dilated. The default is to do
+## so.
+erode=1
 
 # Note the quotes around `$GETOPT_OPTIONS': they are essential!
 eval set -- "$GETOPT_OPTIONS"
@@ -85,6 +88,9 @@ while true ; do
 	-v|--variable)
 	    regressionVariable=$2;
 	    shift 2 ;;
+	-r|--noerode)
+	    erode=0; shift ;;
+	
 	--) 
 	    shift ; break ;;
 	
@@ -286,6 +292,13 @@ else
 fi
 
 
+if [[ $erode -eq 0 ]] ; then
+    erode_args=""
+    echo "*** Disabling erosion and dilation of clusters"
+else
+    erode_args="-1erode 50 -1dilate"
+fi
+
 
 
 GROUP_DATA=$DATA/Group.data.$regressionVariable${cleanedSuffix}
@@ -395,7 +408,7 @@ for seed in $seeds ; do
 	    -1thresh $tThreshold \
 	    -1dindex $coefBrikId -1tindex $tvalueBrikId \
 	    -dxyz=1 -1clust_order $rmm $nVoxels \
-	    -1erode 50 -1dilate \
+	    $erode_args \
 	    ${latestRlmBucketFile}
     3dclust -1Dformat -nosum -dxyz=1 $rmm $nVoxels clorder.$suffix+tlrc > clust.$suffix.txt
     
