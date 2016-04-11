@@ -95,8 +95,31 @@ data.dir=file.path(root.dir, "sanDiego/rsfcGraphAnalysis/data/")
 
 admin.data.dir=file.path(data.dir, "admin")
 config.data.dir=file.path(data.dir, "config")
-group.data.dir=file.path(data.dir, "Group.data")
-group.results.dir=file.path(data.dir, "Group.results")
+
+## group.data.dir=file.path(data.dir, "Group.data.acc.amygdala.paper")
+## group.results.dir=file.path(data.dir, "Group.results.acc.amygdala.paper")
+## analysis="acc.amygdala.paper"
+
+## group.data.dir=file.path(data.dir, "Group.data.kaiser.amygdala.paper")
+## group.results.dir=file.path(data.dir, "Group.results.kaiser.amygdala.paper")
+## analysis="kaiser.amygdala.paper"
+
+
+
+## group.data.dir=file.path(data.dir, "Group.data.acc.graph.paper")
+## group.results.dir=file.path(data.dir, "Group.results.acc.graph.paper")
+## analysis="acc.graph.paper"
+
+group.data.dir=file.path(data.dir, "Group.data.kaiser.graph.paper")
+group.results.dir=file.path(data.dir, "Group.results.kaiser.graph.paper")
+analysis="kaiser.graph.paper"
+
+
+
+
+## group.data.dir=file.path(data.dir, "Group.data")
+## group.results.dir=file.path(data.dir, "Group.results")
+
 seeds.data.dir=file.path(data.dir, "seeds")
 
 demographicsFilename=file.path(admin.data.dir, "0-data_entry_current_2014.csv")
@@ -107,7 +130,11 @@ wasi=readCsvFile(wasiFilename, inSubjectColumnName="SubID")
 
 ## seeds=readSeedsFile(file.path(config.data.dir, "juelich_amygdala_seeds_weights.txt"))
 
-seeds=readSeedsFile(file.path(config.data.dir, "juelich_whole_amygdala_seeds.txt"))
+seeds=readSeedsFile(file.path(config.data.dir, "kaiser_supplemental_seeds.txt"))
+
+## seeds=readSeedsFile(file.path(config.data.dir, "short_ACC_seed_list.txt"))
+
+## seeds=readSeedsFile(file.path(config.data.dir, "juelich_whole_amygdala_seeds.txt"))
 
 ## wasi.column.names=c("Verbal", "Performance", "Full")
 ## only use the WASI Full score as a covariate as perfromance and
@@ -115,7 +142,7 @@ seeds=readSeedsFile(file.path(config.data.dir, "juelich_whole_amygdala_seeds.txt
 wasi.column.names=c("Full")
 
 ## covariate.column.names=c("age.in.years")
-covariate.column.names=c("Full")
+covariate.column.names=c("Full", "age.in.years", "Gender")
 
 ## atAndNat = suicide attempters and non-attempters
 grouping="mddAndCtrl"
@@ -204,7 +231,9 @@ for (seed in seeds) {
             cat("*** Mean centering", col, "\n")            
             mgd[, col] = scale(mgd[, col], center=TRUE, scale=FALSE)
         } else {
-            cat(sprintf("*** Skipping centering for %s: Not a numeric column\n", col))
+            ##cat(sprintf("*** Skipping centering for %s: Not a numeric column\n", col))
+            cat(sprintf("*** WARNING: Converting %s to underlying numeric representation of the R factor and mean centering that\n", col))
+            mgd[, col] = scale(as.numeric(mgd[, col]), center=TRUE, scale=FALSE)            
         }
     }
 
@@ -216,7 +245,7 @@ for (seed in seeds) {
     ## pick those columns that we want to correct for in the t-tests
     mgd=mgd[, c("subject", "Group", covariate.column.names, "InputFile")]
 
-    covariates.filename=file.path(group.data.dir, paste("3dttest.covariates", grouping, seedName, "txt", sep="."))
+    covariates.filename=file.path(group.data.dir, paste("3dttest.covariates", grouping, seedName, analysis, "txt", sep="."))
     cat("*** Writing covariates file to:", covariates.filename, "\n")
     ## the ordering of the columns in the the write command below is
     ## important. It must be subject <covariates> InputFile.
@@ -246,7 +275,7 @@ for (seed in seeds) {
     three.d.ttest.arguments = sprintf("-mask %s \\\n-prefix %s \\\n-center NONE \\\n-setA %s %s \\\n-setB %s %s \\\n-covariates %s",
         mask, prefix, setA.group, setA.labels.and.files, setB.group, setB.labels.and.files, covariates.filename)
 
-    three.d.ttest.command.script.filename=file.path(scripts.dir, sprintf("07-ttest.withCovariates.%s.%s.sh", grouping, seedName))
+    three.d.ttest.command.script.filename=file.path(scripts.dir, sprintf("07-ttest.withCovariates.%s.%s.%s.sh", grouping, seedName, analysis))
     cat("*** Writing the 3dttest++ command to:", three.d.ttest.command.script.filename, "\n")
 
     full.three.d.ttest.command=sprintf("cd %s ; %s %s", group.results.dir, three.d.ttest.command, three.d.ttest.arguments)
