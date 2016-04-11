@@ -184,7 +184,7 @@ function makeScaledDataLink {
     fi
 }
 
-makeBetweenGroupBuckets=0
+makeBetweenGroupBuckets=1
 makeBetweenGroupBucketsWithMedcicated=0
 
 makeCdrsrbuckets=0
@@ -195,19 +195,20 @@ makeBdiBuckets=0
 makeCgasBuckets=0
 makeMascBuckets=0
 
-makeBaselineMascBuckets=1
+makeBaselineMascBuckets=0
 
 makeCdiBuckets=0
 makeRadsBuckets=0
 
 ## seedName="HO.L.amygdala.3mm"
 
-seedName="L_whole_amygdala.3mm"
+## seedName="L_whole_amygdala.3mm"
+seedName="L_whole_sgacc.3mm"
 
 if [[ $makeBetweenGroupBuckets == 1 ]] ; then 
 
-    GROUP_DATA=$DATA/Group.data
-    GROUP_RESULTS=$DATA/Group.results
+    GROUP_DATA=$DATA/Group.data #.kaiser.amygdala.paper
+    GROUP_RESULTS=$DATA/Group.results #.kaiser.amygdala.paper
 
     # ctrlSubjects="$( cat ../data/config/clean.ncl.subjectList.txt )"
     # mddSubjects="$( cat ../data/config/mdd.nat.txt )"
@@ -220,6 +221,9 @@ if [[ $makeBetweenGroupBuckets == 1 ]] ; then
     ## using the subdivisions or not
     ctrlSubjects="$( cat ../data/config/clean.ncl.subjectList.txt )"
     mddSubjects="$( cat ../data/config/clean.mdd.subjectList.txt )"
+
+#    ctrlSubjects="$( cat ../data/config/ncl_subjectList_npp.txt )"
+#    mddSubjects="$( cat ../data/config/mdd_subjectList_npp.txt )"
     subjects="$ctrlSubjects $mddSubjects"
     
     [[ ! -d $GROUP_DATA ]]    && mkdir -p $GROUP_DATA
