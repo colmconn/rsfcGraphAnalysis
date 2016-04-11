@@ -54,8 +54,8 @@ fi
 echo "*** Extracting RSFC for the following seeds:"
 echo $seeds
 
-[[ ! -d $DATA/$subjectNumber/rsfc/yeo7lib ]] && mkdir -p $DATA/$subjectNumber/rsfc/yeo7lib
-cd $DATA/$subjectNumber/rsfc/yeo7lib
+[[ ! -d $DATA/$subjectNumber/rsfc/yeo7split4matthew ]] && mkdir -p $DATA/$subjectNumber/rsfc/yeo7split4matthew
+cd $DATA/$subjectNumber/rsfc/yeo7split4matthew
 
 ##[[ ! -d $DATA/$subjectNumber/rsfc/aal ]] && mkdir -p $DATA/$subjectNumber/rsfc/aal
 ##cd $DATA/$subjectNumber/rsfc/aal
