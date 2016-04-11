@@ -10,8 +10,29 @@ programName=`basename $0`
 GETOPT=$( which getopt )
 ROOT=${MDD_ROOT:-/data/sanDiego/rsfcGraphAnalysis/}
 DATA=$ROOT/data
-GROUP_DATA=$DATA/Group.data
-GROUP_RESULTS=$DATA/Group.results
+
+## GROUP_DATA=$DATA/Group.data
+## GROUP_RESULTS=$DATA/Group.results
+
+## GROUP_DATA=$DATA/Group.data.acc.amygdala.paper
+## GROUP_RESULTS=$DATA/Group.results.acc.amygdala.paper
+
+
+## GROUP_DATA=$DATA/Group.data.acc.graph.paper
+## GROUP_RESULTS=$DATA/Group.results.acc.graph.paper
+
+
+## GROUP_DATA=$DATA/Group.data.kaiser.amygdala.paper
+## GROUP_RESULTS=$DATA/Group.results.kaiser.amygdala.paper
+
+
+GROUP_DATA=$DATA/Group.data.kaiser.graph.paper
+GROUP_RESULTS=$DATA/Group.results.kaiser.graph.paper
+
+
+
+
+
 MDD_STANDARD=$ROOT/standard
 MDD_TISSUEPRIORS=$ROOT/tissuepriors
 scriptsDir=${ROOT}/scripts
@@ -35,7 +56,14 @@ scriptsDir=${ROOT}/scripts
 taskFile=taskFile-mask-z-score.txt
 #subjects="320_A 323_A 149_A 150_A 161_A 300_A 309_A 316_A 338_A 344_A 345_A 349_A 361_A"
 ## seedList="../data/config/juelich_amygdala_seeds_weights.txt "
-seedList="../data/config/juelich_whole_amygdala_seeds.txt"
+
+##seedList="../data/config/juelich_whole_amygdala_seeds.txt"
+
+seedList="../data/config/kaiser_supplemental_seeds.txt"
+
+## seedList="../data/config/short_ACC_seed_list.txt"
+
+
 seeds=$( eval echo $( cat $seedList | sed "/#/d" ) )
 groups="mddAndCtrl"
 
