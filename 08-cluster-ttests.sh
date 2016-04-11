@@ -10,14 +10,16 @@ programName=`basename $0`
 GETOPT=$( which getopt )
 ROOT=${MDD_ROOT:-/data/sanDiego/rsfcGraphAnalysis/}
 DATA=$ROOT/data
-GROUP_DATA=$DATA/Group.data
-GROUP_RESULTS=$DATA/Group.results
+##GROUP_DATA=$DATA/Group.data
+##GROUP_RESULTS=$DATA/Group.results
 MDD_STANDARD=$ROOT/standard
 MDD_TISSUEPRIORS=$ROOT/tissuepriors
 scriptsDir=${ROOT}/scripts
 
 logDir=${DATA}/log
-GETOPT_OPTIONS=$( $GETOPT  -o "l:is:n:op:c:s:ev" --longoptions "seedlist:,useInherentSmoothness,svc:,nn:,overwrite,pvalue:,cpvalue:,sided,cleaned,covaried" -n ${programName} -- "$@" )
+GETOPT_OPTIONS=$( $GETOPT  -o "l:is:n:op:c:s:evd:r:" \
+			   --longoptions "seedlist:,useInherentSmoothness,svc:,nn:,overwrite,pvalue:,cpvalue:,sided,cleaned,covaried,data:,results:" \
+			   -n ${programName} -- "$@" )
 exitStatus=$?
 if [[ $exitStatus != 0 ]] ; then 
     echo "Error with getopt. Terminating..." >&2 
@@ -67,7 +69,13 @@ while true ; do
 	-e|--cleaned)
 	    cleaned=1; shift ;;		
 	-v|--covaried)
-	    covaried=1; shift ;;		
+	    covaried=1; shift ;;
+	-d|--data)
+	    GROUP_DATA=$2;
+	    shift 2 ;;
+	-r|--results)
+	    GROUP_RESULTS=$2;
+	    shift 2 ;;
 	--) 
 	    shift ; break ;;
 
@@ -192,8 +200,6 @@ if [[ $covaried -eq 1 ]] ; then
     covariedSuffix=".covaried"
 fi
 
-echo "*** Will group results files in $GROUP_RESULTS"
-
 if [ $useInherentSmoothness -eq 1 ] ; then 
     if [ -f $GROUP_DATA/${task}.mddAndCtrl.REML.fwhmEstimates.tab ] ; then 
 	usedFwhm=$( cat $GROUP_DATA/${task}.mddAndCtrl.REML.fwhmEstimates.tab | gawk '{print $4}' | gawk '{s+=$1}END{print s/NR}' )
@@ -230,7 +236,32 @@ else
     echo "*** Running a $side test"
 fi
 
+if [[ "x$GROUP_DATA" == "x" ]] ; then
+    echo "*** No value provided for GROUP_DATA (-d or --data). Cannot continue."
+    exit
+fi
 
+if [[ "x$GROUP_RESULTS" == "x" ]] ; then
+    echo "*** No value provided for GROUP_RESULTS (-r or --results). Cannot continue."
+    exit
+fi
+
+GROUP_DATA=$( readlink -f $GROUP_DATA )
+if [[ ! -d "$GROUP_DATA" ]] ; then
+    echo "*** No such directory: $GROUP_DATA"
+    echo "Cannot continue."
+    exit
+fi
+
+GROUP_RESULTS=$( readlink -f $GROUP_RESULTS )
+if [[ ! -d "$GROUP_RESULTS" ]] ; then
+    echo "*** No such directory: $GROUP_RESULTS"
+    echo "Cannot continue."
+    exit
+fi
+
+echo "*** Will use data          files in $GROUP_DATA"
+echo "*** Will use group results files in $GROUP_RESULTS"
 cd $GROUP_RESULTS
 
 groups="mddAndCtrl"
