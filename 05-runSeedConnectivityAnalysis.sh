@@ -30,7 +30,12 @@ for subject in $subjects ; do
 	
 	## echo "./04-weightedSingleSubjectRsfc.sh -s $subject -l ../data/config/juelich_amygdala_seeds_weights.txt" >> ${taskFile}
 
-	echo "./04-singleSubjectRsfc.sh -s $subject -l ../data/config/juelich_whole_amygdala_seeds.txt" >> ${taskFile}
+	## echo "./04-singleSubjectRsfc.sh -s $subject -l ../data/config/juelich_whole_amygdala_seeds.txt" >> ${taskFile}
+	
+	## echo "./04-singleSubjectRsfc.sh -s $subject -l ../data/config/kaiser_supplemental_seeds.txt" >> ${taskFile}
+	## echo "./04-singleSubjectRsfc.sh -s $subject -l ../data/config/short_ACC_seed_list.txt"       >> ${taskFile}		
+
+	echo "./04-singleSubjectRsfc.sh -s $subject -l ../data/config/whole_sgacc_seeds.txt" >> ${taskFile}
 	
 	## echo "./04-singleSubjectRsfc.sh -s $subject -l ../data/config/Harvard-Oxford_amygdala_seeds.txt" >> ${taskFile}
 
@@ -79,7 +84,7 @@ nTasks=$( cat $taskFile | wc -l )
 rm -f $ROOT/log/runSeedConnectivity.log
 sge_command="qsub -N seedConnectivity -q all.q -j y -m n -V -wd $( pwd ) -o $ROOT/log/runSeedConnectivity.log -t 1-$nTasks" 
 echo $sge_command
-exec $sge_command <<EOF
+( exec $sge_command <<EOF
 #!/bin/sh
 
 #$ -S /bin/sh
@@ -88,6 +93,6 @@ command=\`sed -n -e "\${SGE_TASK_ID}p" $taskFile\`
 
 exec /bin/sh -c "\$command"
 EOF
-
+)
 echo "Running qstat"
 qstat
