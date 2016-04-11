@@ -15,8 +15,8 @@ if [[ $# -gt 0 ]] ; then
 else
 #subjects="$( cat /data/sanDiego/rsfcGraphAnalysis/data/config/estop.realigned.subj.txt )"
 
-subjects="$( cat /data/sanDiego/rsfcGraphAnalysis/data/config/estop.subjList.txt )"
-#subjects="$( cat /data/sanDiego/rsfcGraphAnalysis/data/config/rs114a.subj.txt )"
+#subjects="$( cat /data/sanDiego/rsfcGraphAnalysis/data/config/estop.subjList.txt )"
+subjects="$( cat /data/sanDiego/rsfcGraphAnalysis/data/config/rs114a.subj.txt )"
 echo $subjects
 
     ## change task above too to match this list of subjects
@@ -35,7 +35,7 @@ for subject in $subjects ; do
 	
      if [[ -f $RSFC_ROOT/$taskDir/data/$subject/${subject}$task+orig.HEAD ]] ; then
 
-	cat <<EOF > run/run-yeo7libestop-$subject.sh
+	cat <<EOF > run/run-yeo7split-$subject.sh
 #!/bin/bash
 
 ## jobname
@@ -86,15 +86,15 @@ cd $RSFC_ROOT/$taskDir/scripts
 ## ./04-extractRsfcTimeseriesFromAalMasks.sh  --subject=$subject -l ../standard/aal_for_SPM8/fcseedlist3mm.txt 
 ##./04-extractRsfcTimeseriesFromAalMasks-tiff.sh --subject=$subject --seedlist /data/sanDiego/rsfcGraphAnalysis/standard/yeo7liberal/yeo_7liberal_split2.txt
 
- ./04-extractRsfcTimeseriesFromAalMasks-tiff.sh --subject=$subject --seedlist /data/sanDiego/rsfcGraphAnalysis/standard/yeo7liberal/yeo_rsn_7liberal.txt
+ ./04-extractRsfcTimeseriesFromAalMasks-tiff.sh --subject=$subject --seedlist /data/sanDiego/rsfcGraphAnalysis/standard/yeo7liberal/yeo_7liberal_split.txt
 
- ./04-extractEstopTimeseriesFromAalMasks-tiff.sh --subject=$subject --seedlist /data/sanDiego/rsfcGraphAnalysis/standard/yeo7liberal/yeo_rsn_7liberal.txt
+#./04-extractEstopTimeseriesFromAalMasks-tiff.sh --subject=$subject --seedlist /data/sanDiego/rsfcGraphAnalysis/standard/yeo7liberal/yeo_rsn_7liberal.txt
 
 EOF
-	chmod +x  run/run-yeo7libestop-$subject.sh
+	chmod +x  run/run-yeo7split-$subject.sh
 	echo $subject
-	qsub -o ../log/$subject.yeo7libestop.log \
-	     run/run-yeo7libestop-$subject.sh
+	qsub -o ../log/$subject.yeo7split.log \
+	     run/run-yeo7split-$subject.sh
      else
      	echo "*** No such file: $RSFC_ROOT/$taskDir/data/$subject/${subject}$task+orig.HEAD"
      fi
