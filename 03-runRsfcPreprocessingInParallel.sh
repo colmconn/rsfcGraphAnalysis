@@ -120,7 +120,7 @@ EOF
     fi
 
     cat <<EOF >> $outputScriptName
-tcsh -f ${subject}.rsfc.preproc.tcsh
+tcsh -f ${subject}.rsfc.preproc.tcsh $subject
 
 if [[ -f ${subject}.pm.cleanEPI+orig.HEAD ]] ; then 
 
