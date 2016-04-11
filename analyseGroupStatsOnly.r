@@ -2,7 +2,7 @@ rm(list=ls())
 graphics.off()
 
 ##library(gmodels)
-library(gdata)
+## library(gdata)
 library(ggplot2)
 ##library(lubridate)
 library(compute.es)
@@ -191,12 +191,25 @@ getSeedName <- function(inSeedPath){
 }
 
 
-makeTableString <- function(inGroup, inMean, inSe, inMin, inMax, inNaCount, inMissingData=TRUE) {
+makeTableString <- function(inGroup, inMean, inSe, inMin, inMax, inNaCount, inMissingData=TRUE, in.range=TRUE) {
     ##  st=paste(round(inMean, 1), " / ", round(inSe, 1),    
 
-    st=paste(round(inMean, 1), " ± ", round(inSe, 1),
-        " (", round(inMin, 1), "-", round(inMax, 1), ")", ifelse(inMissingData & inNaCount > 0, paste(" [", inNaCount, "]", sep=""), ""), sep="")
+    st=paste(round(inMean, 1), "±", round(inSe, 1),
+        ifelse(in.range, paste(" (", round(inMin, 1), "-", round(inMax, 1), ")", sep=""), ""), ifelse(inMissingData & inNaCount > 0, paste(" [", inNaCount, "]", sep=""), ""), sep="")
     return(st)
+}
+
+make.p.value.string <- function(in.p.value) {
+    if (in.p.value < 0.001)
+        p.value.string="<0.001"
+    else if (in.p.value < 0.01)
+        p.value.string="<0.01"
+    else if (in.p.value < 0.05)
+        p.value.string="<0.05"
+    else
+        p.value.string=round(in.p.value, 2)
+
+    return (p.value.string)
 }
 
 fixSubjectIds <- function (inDataFrame, inColumnName=NULL) {
@@ -229,8 +242,8 @@ analyse.differences.between.included.and.excluded <- function(inData, group.vari
     cat(sprintf("*** Using %s as the grouping variable. Group1: %s Group2: %s\n", group.variable, group1, group2))
     
 
-    inData$Grp=drop.levels(inData[ , group.variable])
-    inData$Gender=drop.levels(inData$Gender)
+    inData$Grp=droplevels(inData[ , group.variable])
+    inData$Gender=droplevels(inData$Gender)
 
      for (i in 1: length(psychMeasures)) {
         variable=psychMeasures[[i]]$variable
@@ -310,7 +323,7 @@ analyse.differences.between.included.and.excluded <- function(inData, group.vari
 }    
 
 
-analyse <- function(inData, group.variable="Grp", compute.effect.size=TRUE, results.table.filename=NULL, results.stack=stack()) {
+analyse <- function(inData, group.variable="Grp", compute.effect.size=TRUE, results.table.filename=NULL, in.range=TRUE, results.stack=stack()) {
 
     if (length(levels(group.variable)) > 2 ) {
         stop("analyse: Cannot handle more then two levels in the grouping variable. Quitting.\n")
@@ -326,10 +339,10 @@ analyse <- function(inData, group.variable="Grp", compute.effect.size=TRUE, resu
     cat(sprintf("*** Using %s as the grouping variable. Group1: %s Group2: %s\n", group.variable, group1, group2))
     
 
-    inData$Grp=drop.levels(inData[ , group.variable])
-    inData$Gender=drop.levels(inData$Gender)
-    ## inData$Race=drop.levels(inData$Race)
-    inData$Race=as.factor(tolower(drop.levels(inData$Race)))
+    inData$Grp=droplevels(inData[ , group.variable])
+    inData$Gender=droplevels(inData$Gender)
+    ## inData$Race=droplevels(inData$Race)
+    inData$Race=as.factor(tolower(droplevels(inData$Race)))
     
     cat("\n*** Gender\n")
     gender.table=table(inData[, c("Gender", group.variable)])
@@ -356,7 +369,7 @@ analyse <- function(inData, group.variable="Grp", compute.effect.size=TRUE, resu
     csvLine=make.proportions.test.string.for.results.stack(n.table, n.test, group1, group2, "Number of participants in final analysis (n)")
     push(results.stack, csvLine)
 
-    ## we dont use the make.proportions.test.string.for.results.stack because it cant handle the gender split
+    ## we don't use the make.proportions.test.string.for.results.stack because it can't handle the gender split
     csvLine=paste("Gender (M / F)", paste(gender.table["M", group1], gender.table["F", group1], sep=" / "),
         paste(gender.table["M", group2], gender.table["F", group2], sep=" / "),
         sprintf("Chi(%0.2f) = %0.2f",
@@ -371,6 +384,9 @@ analyse <- function(inData, group.variable="Grp", compute.effect.size=TRUE, resu
     ## print(prop.test(race.table))
     
     cat("*** Now performing tests on psychMeasures\n")
+    if(compute.effect.size) {
+        cat("*** Computing effect sizes. The next bit may be slow\n")
+    }
     
     for (i in 1: length(psychMeasures)) {
         variable=psychMeasures[[i]]$variable
@@ -403,13 +419,13 @@ analyse <- function(inData, group.variable="Grp", compute.effect.size=TRUE, resu
             group2.string=""
             test=0
             if (isNonparametricTestVariable(variable)) {
-                group1.string=makeTableString(sm.df[1, 1], inMean=sm.df[1, "median"],  sm.df[1, "IQR"], sm.df[1, "min"], sm.df[1, "max"], sm.df[1, "nacount"], inMissingData=TRUE)
-                group2.string=makeTableString(sm.df[2, 1], inMean=sm.df[2, "median"],  sm.df[2, "IQR"], sm.df[2, "min"], sm.df[2, "max"], sm.df[2, "nacount"], inMissingData=TRUE)
+                group1.string=makeTableString(sm.df[1, 1], inMean=sm.df[1, "median"],  sm.df[1, "IQR"], sm.df[1, "min"], sm.df[1, "max"], sm.df[1, "nacount"], inMissingData=TRUE, in.range=FALSE)
+                group2.string=makeTableString(sm.df[2, 1], inMean=sm.df[2, "median"],  sm.df[2, "IQR"], sm.df[2, "min"], sm.df[2, "max"], sm.df[2, "nacount"], inMissingData=TRUE, in.range=FALSE)
                 
                 ##name=paste(name, "†", sep="")
             } else {
-                group1.string=makeTableString(sm.df[1, 1], sm.df[1, variable],  sm.df[1, "sd"], sm.df[1, "min"], sm.df[1, "max"], sm.df[1, "nacount"], inMissingData=TRUE)
-                group2.string=makeTableString(sm.df[2, 1], sm.df[2, variable],  sm.df[2, "sd"], sm.df[2, "min"], sm.df[2, "max"], sm.df[2, "nacount"], inMissingData=TRUE)
+                group1.string=makeTableString(sm.df[1, 1], sm.df[1, variable],  sm.df[1, "sd"], sm.df[1, "min"], sm.df[1, "max"], sm.df[1, "nacount"], inMissingData=TRUE, in.range=FALSE)
+                group2.string=makeTableString(sm.df[2, 1], sm.df[2, variable],  sm.df[2, "sd"], sm.df[2, "min"], sm.df[2, "max"], sm.df[2, "nacount"], inMissingData=TRUE, in.range=FALSE)
             }
 
             if (any(is.na(inData[, variable]))) {
@@ -445,6 +461,7 @@ analyse <- function(inData, group.variable="Grp", compute.effect.size=TRUE, resu
             var.statistic=""
             var.df=""
             var.pvalue=""
+            var.p.value.string=""
             var.parameter=""
             var.significance=""
             var.effect.size=""
@@ -452,7 +469,8 @@ analyse <- function(inData, group.variable="Grp", compute.effect.size=TRUE, resu
             if (is.list(test)) {
                 var.statistic=round(test$statistic, 2)
                 var.df=ifelse(is.numeric(test$parameter), round(test$parameter, 2), "")
-                var.pvalue=round(test$p.value, 2)
+                var.pvalue=test$p.value
+                var.p.value.string=make.p.value.string(var.pvalue)
                 var.parameter=ifelse(is.null(test$parameter), "NA", round(test$parameter, 2))
                 var.significance=make.significance.indications(test$p.value)
 
@@ -490,15 +508,15 @@ analyse <- function(inData, group.variable="Grp", compute.effect.size=TRUE, resu
                             es.ci.lb=0
                         }
                         
-                        st = sprintf("%s,%s,%s,W = %0.0f,%0.2f,PS=%s (%s; %s),%s",
-                            name, paste(group1.string, "†", sep=""), paste(group2.string, "†", sep=""),
+                        st = sprintf("%s,%s,%s,W=%0.0f,%s,PS=%s (%s; %s),%s",
+                            paste(name, "†", sep=""), group1.string, group2.string,
                             round(var.statistic, 2),
-                            round(var.pvalue, 2),  var.effect.size, es.ci.lb , es.ci.ub, var.significance)
+                            var.p.value.string,  var.effect.size, es.ci.lb , es.ci.ub, var.significance)
                     } else {
-                        st = sprintf("%s,%s,%s,W = %0.0f,%0.2f,,%s",
-                            name, paste(group1.string, "†", sep=""), paste(group2.string, "†", sep=""),
+                        st = sprintf("%s,%s,%s,W=%0.0f,%s,,%s",
+                            paste(name, "†", sep=""), group1.string, group2.string,
                             round(var.statistic, 2),
-                            round(var.pvalue, 2), var.significance )
+                            var.p.value.string, var.significance )
                     }
                 } else {
                     if (var.pvalue < 1.0) {
@@ -515,15 +533,15 @@ analyse <- function(inData, group.variable="Grp", compute.effect.size=TRUE, resu
                             es.ci.lb=0
                         }
                             
-                        st = sprintf("%s,%s,%s,t(%0.2f) = %0.2f,%0.2f,g=%s (%0.2f; %0.2f),%s",
+                        st = sprintf("%s,%s,%s,t(%0.2f)=%0.2f,%s,g=%s (%0.2f; %0.2f),%s",
                             name, group1.string, group2.string,
                             round(var.parameter, 2), round(var.statistic, 2),
-                            round(var.pvalue, 2),    var.effect.size, es.ci.lb, es.ci.ub, var.significance )
+                            var.p.value.string,    var.effect.size, es.ci.lb, es.ci.ub, var.significance )
                     } else {
-                        st = sprintf("%s,%s,%s,t(%0.2f) = %0.2f,%0.2f,,%s",
+                        st = sprintf("%s,%s,%s,t(%0.2f)=%0.2f,%s,,%s",
                             name, group1.string, group2.string,
                             round(var.parameter, 2), round(var.statistic, 2),
-                            round(var.pvalue, 2),    var.significance )
+                            var.p.value.string,    var.significance )
                     }
                 }
                 
@@ -567,7 +585,7 @@ analyse <- function(inData, group.variable="Grp", compute.effect.size=TRUE, resu
 
 isNonparametricTestVariable <- function (inVariableName) {
 
-    ## the C_ will capture the Caprara Irritablity ans emotional
+    ## the C_ will capture the Caprara Irritablity and emotional
     ## susceptibility scales
     ##nonParametricRegexp="Tanner|SES|PSWQ|CGI.CGAS|CoRum|RSQ|Hand|C_|CTQ"
     ## nonParametricRegexp="Tanner|SES|PSWQ|CGI.CGAS|CoRum|RSQ|Hand|C_|num.stressful.events|num.severe.events|total.sum.stress"
@@ -1100,8 +1118,8 @@ if (! vbmAnalysis) {
     original.subjectList[which (original.subjectList$subject=="300"), ]="169/300"
     original.subjectList.mgd=cbind(original.subjectList, demographics[match(original.subjectList$subject, demographics$ID), c("Grp", "Gender")])
     original.subjectList.mgd$subject=as.factor(original.subjectList.mgd$subject)
-    original.subjectList.mgd$Grp=drop.levels(original.subjectList.mgd$Grp)
-    original.subjectList.mgd$Gender=drop.levels(original.subjectList.mgd$Gender)
+    original.subjectList.mgd$Grp=droplevels(original.subjectList.mgd$Grp)
+    original.subjectList.mgd$Gender=droplevels(original.subjectList.mgd$Gender)
 
     nodata.subjectList=rbind(nodata.ctrl, nodata.mdd)
     nodata.subjectList$subject=gsub("_A[0-9]?", "", as.character(nodata.subjectList$subject), fixed=FALSE)
@@ -1111,8 +1129,8 @@ if (! vbmAnalysis) {
     }
     nodata.subjectList.mgd=cbind(nodata.subjectList, demographics[match(nodata.subjectList$subject, demographics$ID), c("Grp", "Gender")])
     nodata.subjectList.mgd$subject=as.factor(nodata.subjectList.mgd$subject)
-    nodata.subjectList.mgd$Grp=drop.levels(nodata.subjectList.mgd$Grp)
-    nodata.subjectList.mgd$Gender=drop.levels(nodata.subjectList.mgd$Gender)
+    nodata.subjectList.mgd$Grp=droplevels(nodata.subjectList.mgd$Grp)
+    nodata.subjectList.mgd$Gender=droplevels(nodata.subjectList.mgd$Gender)
 
 
     doNotAnalyze.subjectList=rbind(doNotAnalyze.ctrl, doNotAnalyze.mdd)
@@ -1124,8 +1142,8 @@ if (! vbmAnalysis) {
     ## doNotAnalyze.subjectList.mgd=cbind(doNotAnalyze.subjectList, demographics[match(doNotAnalyze.subjectList$subject, demographics$ID), c("Grp", "Gender")])
     doNotAnalyze.subjectList.mgd=cbind(doNotAnalyze.subjectList, demographics[match(doNotAnalyze.subjectList$subject, demographics$ID), selectedColumns])    
     doNotAnalyze.subjectList.mgd$subject=as.factor(doNotAnalyze.subjectList.mgd$subject)
-    doNotAnalyze.subjectList.mgd$Grp=drop.levels(doNotAnalyze.subjectList.mgd$Grp)
-    doNotAnalyze.subjectList.mgd$Gender=drop.levels(doNotAnalyze.subjectList.mgd$Gender)
+    doNotAnalyze.subjectList.mgd$Grp=droplevels(doNotAnalyze.subjectList.mgd$Grp)
+    doNotAnalyze.subjectList.mgd$Gender=droplevels(doNotAnalyze.subjectList.mgd$Gender)
 
     cat("\n*** Table of individuals originally included in analysis\n")
     original.gender.table=table(original.subjectList.mgd[, c("Gender", "Grp")])
@@ -1206,7 +1224,7 @@ mgd=cbind(
 ## remove the now unnecessary subject with timepoint column
 mgd$subjectWithTimePoint=NULL
 
-mgd$Grp=drop.levels(mgd$Grp)
+mgd$Grp=droplevels(mgd$Grp)
 mgd$SCARED.som.panic=as.numeric(as.vector(mgd$SCARED.som.panic))
 mgd$MASC.tscore=as.numeric(mgd$MASC.tscore)
 
@@ -1230,7 +1248,7 @@ doNotAnalyze.mgd=cbind(
 ## remove the now unnecessary subject with timepoint column
 doNotAnalyze.mgd$subjectWithTimePoint=NULL
 
-doNotAnalyze.mgd$Grp=drop.levels(doNotAnalyze.mgd$Grp)
+doNotAnalyze.mgd$Grp=droplevels(doNotAnalyze.mgd$Grp)
 doNotAnalyze.mgd$SCARED.som.panic=as.numeric(as.vector(doNotAnalyze.mgd$SCARED.som.panic))
 doNotAnalyze.mgd$MASC.tscore=as.numeric(doNotAnalyze.mgd$MASC.tscore)
 
@@ -1372,17 +1390,17 @@ results.table.filename=file.path(group.results.dir, "psychometrics.results.table
 mgd[mgd$subject=="378", "Gender"]="F"
 mgd$Gender=droplevels(mgd$Gender)
 
-## if (exists("results.stack") ) {
-##     analyse(mgd, group.variable="Grp", compute.effect.size=FALSE, results.table.filename=NULL, results.stack=results.stack)
-##     ## analyse(mgd, group.variable="Grp", compute.effect.size=TRUE, results.table.filename=results.table.filename, results.stack=results.stack)
-## } else {
-##     analyse(mgd, group.variable="Grp", compute.effect.size=FALSE, results.table.filename=NULL)
-##     #analyse(mgd, group.variable="Grp", compute.effect.size=TRUE, results.table.filename=results.table.filename)
-## }
+if (exists("results.stack") ) {
+    analyse(mgd, group.variable="Grp", compute.effect.size=TRUE, results.table.filename=NULL, in.range=FALSE, results.stack=results.stack)
+    ## analyse(mgd, group.variable="Grp", compute.effect.size=TRUE, results.table.filename=results.table.filename, results.stack=results.stack)
+} else {
+    analyse(mgd, group.variable="Grp", compute.effect.size=FALSE, results.table.filename=NULL)
+    #analyse(mgd, group.variable="Grp", compute.effect.size=TRUE, results.table.filename=results.table.filename)
+}
 
 
-analyse.differences.between.included.and.excluded(all.subjects, group.variable="Grp", compute.effect.size=FALSE, results.table.filename=NULL)
-graph.rads.by.inclusion.interaction(all.subjects)
+## analyse.differences.between.included.and.excluded(all.subjects, group.variable="Grp", compute.effect.size=FALSE, results.table.filename=NULL)
+## graph.rads.by.inclusion.interaction(all.subjects)
 
 ## WASI.Full.4 outliers
 ##     subject Grp WASI.Full.4
