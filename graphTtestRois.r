@@ -495,8 +495,8 @@ data.dir=file.path(root.dir, "sanDiego/rsfcGraphAnalysis/data/")
 admin.data.dir=file.path(data.dir, "admin")
 config.data.dir=file.path(data.dir, "config")
 seeds.data.dir=file.path(data.dir, "seeds")
-group.data.dir=file.path(data.dir, "Group.data")
-group.results.dir=file.path(data.dir, "Group.results")
+group.data.dir=file.path(data.dir, "Group.data.acc.graph.paper")
+group.results.dir=file.path(data.dir, "Group.results.acc.graph.paper")
 
 ## this file stores all of the demographics of interest, such as ID, group, and drug(s) of choice
 ## demographicsFilename=file.path(admin.data.dir, "0-data_entry_current_10152013.csv")
@@ -525,7 +525,12 @@ groups="mddAndCtrl"
 ## seeds=readSeedsFile(file.path(config.data.dir, "juelich_amygdala_seeds_weights.txt"))
 ## seeds=readSeedsFile(file.path(config.data.dir, "Harvard-Oxford_amygdala_seeds.txt"))
 
-seeds=readSeedsFile(file.path(config.data.dir, "juelich_whole_amygdala_seeds.txt"))
+## seeds=readSeedsFile(file.path(config.data.dir, "juelich_whole_amygdala_seeds.txt"))
+
+## seeds=readSeedsFile(file.path(config.data.dir, "kaiser_supplemental_seeds.txt"))
+
+seeds=readSeedsFile(file.path(config.data.dir, "short_ACC_seed_list.txt"))
+
 
 numberOfSeeds=length(seeds)
 cat(sprintf("*** Found %02d seeds in the seed file\n", length(seeds)))
