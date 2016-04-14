@@ -173,6 +173,8 @@ survey3.filename=file.path(admin.data.dir, "0-data_entry_current_2014withProperT
 survey4.filename=file.path(admin.data.dir, "0-data_entry_current_2014withProperTimepointColumns.survey4.csv")
 sles.filename   =file.path(admin.data.dir, "SLES_20140820.csv")
 ctq.filename    =file.path(admin.data.dir, "Exisiting CTQ Scored_with RC_3_10_2015.csv")
+wasiFilename    =file.path(admin.data.dir, "WASI.csv")
+
 
 ## now read in the CSV files and perfrom preliminary removal of
 ## unwanted rows and columns
@@ -217,6 +219,12 @@ ctq=ctq[, grep("^X", colnames(ctq), fixed=FALSE, invert=TRUE)]
 ## dump rows of all NAs
 ctq=ctq[apply(ctq, 1, function(xx) { ! all(is.na(xx)) }), ]
 
+wasi=readCsvFile(wasiFilename, inSubjectColumnName="SubID")
+## tag the WASI columns with "WASI." so that is obvious what the
+## columns mean, since they could get swamped among the rest of the
+## columns
+colnames(wasi)=c(colnames(wasi)[1], paste("WASI", colnames(wasi)[-1], sep="."))
+
 ## now perform the merging of all the data frames
 ## mgd1=merge(demo, papers,  by.x="ID",                           by.y="ID",                           all=TRUE)
 ## mgd2=merge(mgd1, nps,     by.x="ID",                           by.y="SubID" ,                       all=TRUE)
@@ -229,7 +237,11 @@ ctq=ctq[apply(ctq, 1, function(xx) { ! all(is.na(xx)) }), ]
 
 
 ##mgd1=merge(demo,   papers,  by.x="ID",                           by.y="ID",                           all=TRUE)
-mgd1=merge(papers, nps,     by.x="ID",                           by.y="SubID" ,                       all=TRUE)
+##mgd1=merge(papers, nps,     by.x="ID",                           by.y="SubID" ,                       all=TRUE)
+
+## replace teh WASI from the huge excel file that contaisn everyting
+## with the correctly scored WASI data from a supplemental xl file
+mgd1=merge(papers, wasi,    by.x="ID",                           by.y="SubID" ,                       all=TRUE)
 mgd2=merge(mgd1,   survey1, by.x=c("SubjID", "ID", "timepoint"), by.y=c("SubjID", "ID", "timepoint"), all=TRUE)
 mgd3=merge(mgd2,   survey2, by.x=c("SubjID", "ID", "timepoint"), by.y=c("SubjID", "ID", "timepoint"), all=TRUE)
 mgd4=merge(mgd3,   survey3, by.x=c("SubjID", "ID", "timepoint"), by.y=c("SubjID", "ID", "timepoint"), all=TRUE)
@@ -252,7 +264,7 @@ mgd=mgd[,
 ## line below to keep them
 ## rm(list=c(paste("mgd", 1:7, sep="")))
 
-## remove unwanted columns (age, gender adn MASC.tscore will be added
+## remove unwanted columns (age, gender and MASC.tscore will be added
 ## back in later
 ##mgd=mgd[, -c(grep ("Custom\\.SubjID|SubjID\\.Custom\\.Data|Custom\\.Data\\.SubjID|Age|Gender", colnames(mgd), fixed=FALSE))]
 mgd=mgd[, -c(grep ("Custom\\.SubjID|SubjID\\.Custom\\.Data|Custom\\.Data\\.SubjID|Age|eth\\.code|race\\.code", colnames(mgd), fixed=FALSE))]
@@ -273,25 +285,35 @@ mgd$ID=droplevels(mgd$ID)
 mgd=fixNonNumericColumns(mgd, seq(12, dim(mgd)[2]))
 
 ## fix the subject with the extra space in their gender
-## mgd[mgd$Gender=="M ", "Gender"]="M"
-## mgd$Gender=droplevels(mgd$Gender)
+mgd[which(mgd$Gender=="M "), "Gender"]="M"
+mgd$Gender=droplevels(mgd$Gender)
+
+## 378 identified as transgender, was biologically female and not on any hormone therapy
+mgd[mgd$ID=="378", "Gender"]="F"
+mgd$Gender=droplevels(mgd$Gender)
 
 mgd=fixDates(mgd)
 mgd=computeAge(mgd)
 
 mgd=computeMascScore(mgd)
 
+## delete rows with NA for timepoint
+mgd=mgd[ ! is.na(mgd$timepoint), ]
+mgd$timepoint=droplevels(mgd$timepoint)
+## drop rows where group is NA
+mgd=mgd[ ! is.na(mgd$Grp), ]
+## drop rows where Grp is not MDD or NCL
+mgd=mgd[mgd$Grp %in% c("MDD", "NCL"), ]
+mgd$Grp=droplevels(mgd$Grp)
+##remove rownames
+rownames(mgd)=NULL
+
 ## sort the data frame by ID and then by timepoint
 mgd=mgd[order(mgd$ID, mgd$timepoint), ]
 
-## demo rows with NA for timepoint
-
-mgd=mgd[ ! is.na(mgd$timepoint), ]
-mgd$timepoint=droplevels(mgd$timepoint)
-rownames(mgd)=NULL
-
 ## save the mgd file
-merged.file.name=file.path(admin.data.dir, "merged.demographics.and.neuropsych.csv")
+date.tag=format(Sys.Date(), "%Y.%m.%d")
+merged.file.name=file.path(admin.data.dir, sprintf("merged.demographics.and.neuropsych.%s.csv", date.tag))
 cat("*** Wrinting merged demographics and neuropsychiactric measures to", merged.file.name, "\n")
 cat("*** WARNING: the MASC t-scores for the timepoints other than A will not be accurate since the MRI data refers to only timepoint A\n")
 write.csv(mgd, merged.file.name, row.names=FALSE, col.names=TRUE, quote=TRUE)
