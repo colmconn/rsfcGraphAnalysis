@@ -28,6 +28,11 @@ sgacc.mdd.list=read.csv(sgacc.mdd.filename, header=TRUE)
 amygdala.hcl.list=read.csv(amygdala.hcl.filename, header=TRUE)
 amygdala.mdd.list=read.csv(amygdala.mdd.filename, header=TRUE)
 
+matthews.rsfc.graph.paper.hcl.list=read.csv("../data/vbm.subject.list.from.matthew.n111/rs114a.ncl.txt", header=FALSE)
+matthews.rsfc.graph.paper.mdd.list=read.csv("../data/vbm.subject.list.from.matthew.n111/rs114a.mdd.txt", header=FALSE)
+
+colnames(matthews.rsfc.graph.paper.hcl.list) = "subject"
+colnames(matthews.rsfc.graph.paper.mdd.list) = "subject"
 
 emm.hcl.list=data.frame("subject" =
                             c("119_A", "121_A", "122_A", "123_A", "126_A", "127_A", "131_A", "135_A", "138_A", "139_A", "141_A", "142_A", "143_A",
@@ -82,3 +87,26 @@ print(length(setdiff(emm.hcl.list$subject, amygdala.hcl.list$subject)))
 
 cat("*** Number of MDD in the EMM paper but not in the amygdala paper: ")
 print(length(setdiff(emm.mdd.list$subject, amygdala.mdd.list$subject)))
+
+
+cat("####################################################################################################\n")
+cat("### Matthew's RSFC graph and amygdala paper\n")
+
+cat("*** Number of HCL subjects common to Matthew's RSFC graph and amygdala RSFC paper: ")
+print(length(intersect(matthews.rsfc.graph.paper.hcl.list$subject, amygdala.hcl.list$subject)))
+
+cat("*** Number of MDD subjects common to Matthew's RSFC graph and amygdala RSFC paper: ")
+print(length(intersect(matthews.rsfc.graph.paper.mdd.list$subject, amygdala.mdd.list$subject)))
+
+cat("*** Number of HCL in the amygdala paper but not in the Matthew's RSFC graph paper: ")
+print(length(setdiff(amygdala.hcl.list$subject, matthews.rsfc.graph.paper.hcl.list$subject)))
+
+cat("*** Number of MDD in the amygdala paper but not in the Matthew's RSFC graph paper: ")
+print(length(setdiff(amygdala.mdd.list$subject, matthews.rsfc.graph.paper.mdd.list$subject)))
+
+
+cat("*** Number of HCL in the Matthew's RSFC graph paper but not in the amygdala paper: ")
+print(length(setdiff(matthews.rsfc.graph.paper.hcl.list$subject, amygdala.hcl.list$subject)))
+
+cat("*** Number of MDD in the Matthew's RSFC graph paper but not in the amygdala paper: ")
+print(length(setdiff(matthews.rsfc.graph.paper.mdd.list$subject, amygdala.mdd.list$subject)))
