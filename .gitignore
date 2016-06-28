@@ -22,3 +22,4 @@ run/
 multipleParallBootedRegressions-TaskFile
 multipleParallBootedRegressions.o*
 rm.*
+enorms.csv
