@@ -2,6 +2,11 @@
 
 rm(list=ls())
 
+##the name of this script
+script.name=parent.frame(2)$ofile
+## the location (absolute path) to this script
+script.location=normalizePath(dirname(parent.frame(2)$ofile))
+
 library(MASS)
 library(getopt)
 
@@ -16,13 +21,6 @@ if ( ! is.na(AFNI_R_DIR) ) {
 } else {
     stop("Couldn't find AFNI_R_DIR in environment. This points to the location from which to load functions for reading and writing AFNI BRIKS. Stopping!")
 }
-
-## seting the seed before starting the cluster causes problems when starting multiple SNOW SOCK clusters
-## within a short time of each other as the PORT used for communication is generated randomly which can
-## result in different clusters tryign to use the same port for sommunication
-
-seed.value=1234567
-## set.seed(seed.value)
 
 ##########################################################################################################################################################################
 ### START OF FUNCTIONS ###################################################################################################################################################
