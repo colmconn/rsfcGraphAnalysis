@@ -678,7 +678,7 @@ regressionVariables=list(
     ## list(variable="CDRS.t.score",                     name="Children's Depression\nRating Scale (Baseline)"),    
 
     ## predictive regressions
-    ## list(variable="CDRS.t.score.scaled.diff",      name=expression(paste(Delta, " CDRS-R")))#,
+    list(variable="CDRS.t.score.scaled.diff",      name=expression(paste(Delta, " CDRS-R")))#,
 
     ## list(variable="CDRS.t.score.rstandard",        name="CDRS-R Residual")#,
 
@@ -694,7 +694,7 @@ regressionVariables=list(
     ## list(variable="CDI.Total.diff",                name="Children's Depression Inventory (A to C Change)")
 
     ## list(variable="BDI.II.Total",             name="Beck Depression Inventory II")
-    list(variable="MASC.tscore",              name="Multidimensional Anxiety Scale\nfor Children (Standardized)")    
+    ## list(variable="MASC.tscore",              name="Multidimensional Anxiety Scale\nfor Children (Standardized)")    
 )
 
 groups="mddOnly"
@@ -734,7 +734,7 @@ my_theme=
 ##seedFiles=file.path(config.data.dir, "juelich_amygdala_seeds_weights.txt")
 seedFiles=file.path(config.data.dir, "juelich_whole_amygdala_seeds.txt")
 
-baselineOnly=TRUE
+baselineOnly=FALSE
 
 for (seedFile in seedFiles) {
 
@@ -751,7 +751,7 @@ for (seedFile in seedFiles) {
         rvName=regressionVariables[[regressionVariableCount]]$name
 
         group.data.dir=file.path(data.dir, paste("Group.data", rvVariable, sep="."))
-        group.results.dir=file.path(data.dir, paste("Group.results", rvVariable, sep="."), "wholeBrain")
+        group.results.dir=file.path(data.dir, paste("Group.results", rvVariable, sep="."))##, "wholeBrain")
         
         publicationTableFilename=file.path(group.results.dir, paste("publicationTable", usedFwhm, groups, "csv", sep="."))
         ## if (file.exists(publicationTableFilename)) {
