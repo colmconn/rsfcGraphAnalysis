@@ -91,6 +91,7 @@ if ( Sys.info()["sysname"] == "Darwin" ) {
 ## ncpus=1
 
 scripts.dir=file.path(root.dir, "sanDiego/rsfcGraphAnalysis/scripts")
+standard.dir=file.path(root.dir, "sanDiego/rsfcGraphAnalysis/standard")
 data.dir=file.path(root.dir, "sanDiego/rsfcGraphAnalysis/data/")
 
 admin.data.dir=file.path(data.dir, "admin")
@@ -110,15 +111,16 @@ config.data.dir=file.path(data.dir, "config")
 ## group.results.dir=file.path(data.dir, "Group.results.acc.graph.paper")
 ## analysis="acc.graph.paper"
 
-group.data.dir=file.path(data.dir, "Group.data.kaiser.graph.paper")
-group.results.dir=file.path(data.dir, "Group.results.kaiser.graph.paper")
-analysis="kaiser.graph.paper"
+##group.data.dir=file.path(data.dir, "Group.data.kaiser.graph.paper")
+##group.results.dir=file.path(data.dir, "Group.results.kaiser.graph.paper")
+##analysis="kaiser.graph.paper"
 
 
 
 
-## group.data.dir=file.path(data.dir, "Group.data")
-## group.results.dir=file.path(data.dir, "Group.results")
+group.data.dir=file.path(data.dir, "Group.data.afni")
+group.results.dir=file.path(data.dir, "Group.results.afni")
+analysis=""
 
 seeds.data.dir=file.path(data.dir, "seeds")
 
@@ -130,11 +132,11 @@ wasi=readCsvFile(wasiFilename, inSubjectColumnName="SubID")
 
 ## seeds=readSeedsFile(file.path(config.data.dir, "juelich_amygdala_seeds_weights.txt"))
 
-seeds=readSeedsFile(file.path(config.data.dir, "kaiser_supplemental_seeds.txt"))
+## seeds=readSeedsFile(file.path(config.data.dir, "kaiser_supplemental_seeds.txt"))
 
 ## seeds=readSeedsFile(file.path(config.data.dir, "short_ACC_seed_list.txt"))
 
-## seeds=readSeedsFile(file.path(config.data.dir, "juelich_whole_amygdala_seeds.txt"))
+seeds=readSeedsFile(file.path(config.data.dir, "caez_juelich_whole_amygdala_seeds.txt"))
 
 ## wasi.column.names=c("Verbal", "Performance", "Full")
 ## only use the WASI Full score as a covariate as perfromance and
@@ -142,11 +144,18 @@ seeds=readSeedsFile(file.path(config.data.dir, "kaiser_supplemental_seeds.txt"))
 wasi.column.names=c("Full")
 
 ## covariate.column.names=c("age.in.years")
-covariate.column.names=c("Full", "age.in.years", "Gender")
+covariate.column.names=c("Full")
+## covariate.column.names=c("Full", "age.in.years", "Gender")
 
 ## atAndNat = suicide attempters and non-attempters
 grouping="mddAndCtrl"
 ## grouping="atAndNat"
+
+## new.ttest.arguments=""
+## new.ttest.arguments="-resid %s \\\n-CLUSTSIM \\\n-prefix_clustsim resid.CStemp.%s \\\n-tempdir tmp.resid.clustsim.%s"
+new.ttest.arguments="-resid %s \\\n-CLUSTSIM \\\n-prefix_clustsim resid.CStemp.%s"
+
+
 
 for (seed in seeds) {
     seedName=getSeedName(seed)
@@ -245,7 +254,7 @@ for (seed in seeds) {
     ## pick those columns that we want to correct for in the t-tests
     mgd=mgd[, c("subject", "Group", covariate.column.names, "InputFile")]
 
-    covariates.filename=file.path(group.data.dir, paste("3dttest.covariates", grouping, seedName, analysis, "txt", sep="."))
+    covariates.filename=file.path(group.data.dir, gsub("..", ".", paste("3dttest.covariates", grouping, seedName, analysis, "txt", sep="."), fixed=TRUE))
     cat("*** Writing covariates file to:", covariates.filename, "\n")
     ## the ordering of the columns in the the write command below is
     ## important. It must be subject <covariates> InputFile.
@@ -255,9 +264,11 @@ for (seed in seeds) {
     ## cat("*** The data table is as follows:\n")
     ## print(head(mgd))
 
-    ## mask=sprintf("mask.grey.%s.union.masked+tlrc.HEAD", grouping)
-    mask=sprintf("mask.grey.%s.union.masked+tlrc.HEAD", "mddAndCtrl")    
-    prefix=sprintf("ttest.%s.%s.covaried", grouping, seedName)
+    ## mask=sprintf("../mask.grey.%s.union.masked+tlrc.HEAD", grouping)
+    ## mask=sprintf("../mask.grey.%s.union.masked+tlrc.HEAD", "mddAndCtrl")
+    mask=file.path(standard.dir, "/MNI_caez_N27_brain.3mm+tlrc.HEAD")
+    prefix=sprintf("new.ttest.%s.%s.covaried", grouping, seedName)
+    resid.prefix=sprintf("new.ttest.%s.%s.covaried.resid", grouping, seedName)    
 
     ## setA.group="Attempter"
     setA.group=levels(mgd$Group)[1]
@@ -272,15 +283,30 @@ for (seed in seeds) {
     three.d.ttest.command = "3dttest++"
     ## use center NONE here as the covariates are already mean
     ## centered before they were written to the covariates file
-    three.d.ttest.arguments = sprintf("-mask %s \\\n-prefix %s \\\n-center NONE \\\n-setA %s %s \\\n-setB %s %s \\\n-covariates %s",
-        mask, prefix, setA.group, setA.labels.and.files, setB.group, setB.labels.and.files, covariates.filename)
-
-    three.d.ttest.command.script.filename=file.path(scripts.dir, sprintf("07-ttest.withCovariates.%s.%s.%s.sh", grouping, seedName, analysis))
+    if (nchar(new.ttest.arguments) > 0) {
+        ## sprintf(new.ttest.arguments, resid.prefix, seedName, seedName),
+        ## three.d.ttest.arguments = sprintf("%s \\\n-mask %s \\\n-prefix %s \\\n-center NONE \\\n-setA %s %s \\\n-setB %s %s \\\n-covariates %s",
+        three.d.ttest.arguments = sprintf("%s \\\n-mask %s \\\n-prefix %s \\\n-center NONE \\\n-setA %s %s \\\n-setB %s %s \\\n-covariates %s",            
+            sprintf(new.ttest.arguments, resid.prefix, seedName),            
+            mask, prefix,
+            setA.group, setA.labels.and.files,
+            setB.group, setB.labels.and.files,
+            covariates.filename)
+    } else {
+        three.d.ttest.arguments = sprintf("-mask %s \\\n-prefix %s \\\n-center NONE \\\n-setA %s %s \\\n-setB %s %s \\\n-covariates %s",
+            mask, prefix, setA.group, setA.labels.and.files, setB.group, setB.labels.and.files, covariates.filename)
+    }
+    
+    three.d.ttest.command.script.filename=file.path(scripts.dir, gsub("..", ".", sprintf("afni-07-ttest.withCovariates.%s.%s.%s.sh", grouping, seedName, analysis), fixed=TRUE))
     cat("*** Writing the 3dttest++ command to:", three.d.ttest.command.script.filename, "\n")
 
-    full.three.d.ttest.command=sprintf("cd %s ; %s %s", group.results.dir, three.d.ttest.command, three.d.ttest.arguments)
+    ## full.three.d.ttest.command=sprintf("cd %s ; mkdir tmp.resid.clustsim.%s ; %s %s", group.results.dir, seedName, three.d.ttest.command, three.d.ttest.arguments)
+    full.three.d.ttest.command=sprintf("#!/bin.bash\n\nunset AFNI_COMPRESSOR \nexport OMP_NUM_THREADS=40\nmkdir -p %s/new.ttest.%s \ncd %s/new.ttest.%s \n%s %s",
+        group.results.dir, seedName,
+        group.results.dir, seedName,        
+        three.d.ttest.command, three.d.ttest.arguments)    
     cat (full.three.d.ttest.command, file=three.d.ttest.command.script.filename)
-
+    ## cat(full.three.d.ttest.command, "\n\n")
     ## stop()
 
 }

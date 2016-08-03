@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#set -x
+set -x
 
 ROOT=${MDD_ROOT:-/data/sanDiego/rsfcGraphAnalysis}
 DATA=$ROOT/data
@@ -12,30 +12,34 @@ else
     subjects=$( cd $DATA ;  ls -d *_[ABC] )
 fi
 
-taskFile=./runSeedConnectivity-TaskFile
+taskFile=./run/runSeedConnectivity-TaskFile
 cat /dev/null > $taskFile
 
 for subject in $subjects ; do
 
     preprocessedRsfcDir=$DATA/$subject/rsfcPreprocessed
+    ## preprocessedRsfcDir=$DATA/$subject/afniRsfcPreprocessed    
 
     if [[ -f ${preprocessedRsfcDir}/${subject}.pm.cleanEPI.MNI.nii.gz ]] ; then 
-
+    ## if [[ -f ${preprocessedRsfcDir}/errts.${subject}.anaticor+tlrc.HEAD ]] ; then
+	    
 	# echo "./04-singleSubjectRsfc.sh -s $subject -l ../data/config/Fox_seed_list.txt" >> ${taskFile}
 
 	## echo "./04-singleSubjectRsfc.sh -s $subject -l ../data/config/salience_seed_list.txt" >> ${taskFile}
 
 	
-	## echo "./04-singleSubjectRsfc.sh -s $subject -l ../data/config/juelich_amygdala_seeds.txt" >> ${taskFile}
+	## echo "./04-afniSingleSubjectRsfc.sh -s $subject -l ../data/config/caez_juelich_whole_amygdala_seeds.txt" >> ${taskFile}
 	
 	## echo "./04-weightedSingleSubjectRsfc.sh -s $subject -l ../data/config/juelich_amygdala_seeds_weights.txt" >> ${taskFile}
 
-	## echo "./04-singleSubjectRsfc.sh -s $subject -l ../data/config/juelich_whole_amygdala_seeds.txt" >> ${taskFile}
+	echo "./04-singleSubjectRsfc.sh -s $subject -l ../data/config/juelich_whole_amygdala_seeds.txt" >> ${taskFile}
 	
 	## echo "./04-singleSubjectRsfc.sh -s $subject -l ../data/config/kaiser_supplemental_seeds.txt" >> ${taskFile}
-	## echo "./04-singleSubjectRsfc.sh -s $subject -l ../data/config/short_ACC_seed_list.txt"       >> ${taskFile}		
+	## echo "./04-singleSubjectRsfc.sh -s $subject -l ../data/config/short_ACC_seed_list.txt"       >> ${taskFile}
 
-	echo "./04-singleSubjectRsfc.sh -s $subject -l ../data/config/whole_sgacc_seeds.txt" >> ${taskFile}
+	## echo "./04-afniSingleSubjectRsfc.sh -s $subject -l ../data/config/short_CAEZ_ACC_seed_list.txt"       >> ${taskFile}			
+
+	## echo "./04-singleSubjectRsfc.sh -s $subject -l ../data/config/whole_sgacc_seeds.txt" >> ${taskFile}
 	
 	## echo "./04-singleSubjectRsfc.sh -s $subject -l ../data/config/Harvard-Oxford_amygdala_seeds.txt" >> ${taskFile}
 
