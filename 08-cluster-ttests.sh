@@ -283,23 +283,24 @@ for seed in $seeds ; do
     fi
 
     ## cstempPrefix=CStemp.fwhm${usedFwhm}.pvalue.$pValue.cPvalue.$cPvalue
-    cstempPrefix=$( makeClustSimFilePrefix $groups $usedFwhm $pValue $cPvalue )
-    if [ ! -f ${cstempPrefix}.NN${NN}_${side}.1D ] ; then
-	echo "*** Running 3dClustSim"
-	echo "*** Output will be saved to files begining with: $cstempPrefix"
-	#export OMP_NUM_THREADS=10
-	if [[ -f $GROUP_RESULTS/mask.grey.$groups.union.masked+tlrc.HEAD ]] ; then 
-	    3dClustSim -mask mask.grey.$groups.union.masked+tlrc.HEAD -fwhm ${usedFwhm} -both -prefix ${cstempPrefix} -pthr $pValue -athr $cPvalue
-	else 
-	    3dClustSim -mask $MDD_STANDARD/MNI152_T1_3mm_brain_mask.nii.gz  -fwhm ${usedFwhm} -both -prefix ${cstempPrefix} -pthr $pValue -athr $cPvalue
-	fi
-	mv -f 3dClustSim.cmd ${cstempPrefix}.3dClustSim.cmd
-    fi
+    ## cstempPrefix=$( makeClustSimFilePrefix $groups $usedFwhm $pValue $cPvalue )
+    cstempPrefix="CStemp.fwhmxyz7.98x8.05x7.32" #.NN1_1sided.1D 
+    # if [ ! -f ${cstempPrefix}.NN${NN}_${side}.1D ] ; then
+    # 	echo "*** Running 3dClustSim"
+    # 	echo "*** Output will be saved to files begining with: $cstempPrefix"
+    # 	#export OMP_NUM_THREADS=10
+    # 	if [[ -f $GROUP_RESULTS/mask.grey.$groups.union.masked+tlrc.HEAD ]] ; then 
+    # 	    3dClustSim -mask mask.grey.$groups.union.masked+tlrc.HEAD -fwhm ${usedFwhm} -both -prefix ${cstempPrefix} -pthr $pValue -athr $cPvalue
+    # 	else 
+    # 	    3dClustSim -mask $MDD_STANDARD/MNI152_T1_3mm_brain_mask.nii.gz  -fwhm ${usedFwhm} -both -prefix ${cstempPrefix} -pthr $pValue -athr $cPvalue
+    # 	fi
+    # 	mv -f 3dClustSim.cmd ${cstempPrefix}.3dClustSim.cmd
+    # fi
 
     bucketFilename=$GROUP_DATA/restingstate.bucket.$groups.${seedName}.masked+tlrc
     tTestFile=ttest.${groups}.${seedName}${covariedSuffix}+tlrc
     
-    addStatTableCmd="$( cat ${cstempPrefix}.3dClustSim.cmd ) $tTestFile"
+    #addStatTableCmd="$( cat ${cstempPrefix}.3dClustSim.cmd ) $tTestFile"
     #echo "*** Statistic table addition command is: $addStatTableCmd"
     #eval "$addStatTableCmd"
     

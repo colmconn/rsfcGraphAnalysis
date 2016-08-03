@@ -345,18 +345,19 @@ for seed in $seeds ; do
     fi
     
     ## cstempPrefix=CStemp.fwhm${usedFwhm}
-    cstempPrefix=CStemp.fwhm${usedFwhm}.pvalue.$pValue.cPvalue.$cPvalue
-    if [ ! -f ${cstempPrefix}.NN1$side.1D ] ; then
-	echo "*** Running 3dClustSim"
-	#export OMP_NUM_THREADS=10
-	if [[ -f $GROUP_RESULTS/mask.grey.$groups.union.masked+tlrc.HEAD ]] ; then
-	    echo "*** Using mask for clustsim: $GROUP_RESULTS/mask.grey.$groups.union.masked+tlrc.HEAD"
-	    3dClustSim -mask mask.grey.$groups.union.masked+tlrc.HEAD -fwhm ${usedFwhm} -niml -both -prefix ${cstempPrefix} -pthr $pValue -athr $cPvalue
-	else
-	    echo "*** Using mask for clustsim: $MDD_STANDARD/MNI152_T1_3mm_brain_mask.nii.gz"
-	    3dClustSim -mask $MDD_STANDARD/MNI152_T1_3mm_brain_mask.nii.gz  -fwhm ${usedFwhm} -niml -both -prefix ${cstempPrefix} -pthr $pValue -athr $cPvalue
-	fi
-    fi
+    ## cstempPrefix=CStemp.fwhm${usedFwhm}.pvalue.$pValue.cPvalue.$cPvalue
+    cstempPrefix=CStemp.fwhmxyz8.01x8.14x7.37
+    # if [ ! -f ${cstempPrefix}.NN1$side.1D ] ; then
+    # 	echo "*** Running 3dClustSim"
+    # 	#export OMP_NUM_THREADS=10
+    # 	if [[ -f $GROUP_RESULTS/mask.grey.$groups.union.masked+tlrc.HEAD ]] ; then
+    # 	    echo "*** Using mask for clustsim: $GROUP_RESULTS/mask.grey.$groups.union.masked+tlrc.HEAD"
+    # 	    3dClustSim -mask mask.grey.$groups.union.masked+tlrc.HEAD -fwhm ${usedFwhm} -niml -both -prefix ${cstempPrefix} -pthr $pValue -athr $cPvalue
+    # 	else
+    # 	    echo "*** Using mask for clustsim: $MDD_STANDARD/MNI152_T1_3mm_brain_mask.nii.gz"
+    # 	    3dClustSim -mask $MDD_STANDARD/MNI152_T1_3mm_brain_mask.nii.gz  -fwhm ${usedFwhm} -niml -both -prefix ${cstempPrefix} -pthr $pValue -athr $cPvalue
+    # 	fi
+    # fi
     
     bucketFilename=$GROUP_DATA/restingstate.bucket.$groups.${seedName}.masked+tlrc
 
