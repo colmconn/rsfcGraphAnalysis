@@ -286,24 +286,9 @@ fixDataTable <- function (inDataTable) {
     return(inDataTable)
 }
 
+splitDataTableIntoIdAndTimepoint <- function(inDataTable) {
 
-readSubjectOrderTable <- function (inFilename) {
-    cat("*** Reading", inFilename, "\n")
-    subjectOrder=read.csv(inFilename, header=T)
-
-    return(subjectOrder)
-}
-
-fixSubjectOrderTable <- function (inSubjectOrderTable) {
-    inSubjectOrderTable$subject=gsub("300", "169/300", as.character(inSubjectOrderTable$subject), fixed=TRUE)
-    inSubjectOrderTable$subject=as.factor(inSubjectOrderTable$subject)
-
-    return(inSubjectOrderTable)
-}
-
-splitSubjectOrderIntoIdAndTimepoint <- function(inSubjectOrderTable) {
-
-    new.subject.order.table=cbind(inSubjectOrderTable, as.data.frame(t(as.data.frame(strsplit(as.character(inSubjectOrderTable$subject), "_", fixed=TRUE)))))
+    new.subject.order.table=cbind(inDataTable, as.data.frame(t(as.data.frame(strsplit(as.character(inDataTable$subject), "_", fixed=TRUE)))))
     rownames(new.subject.order.table)=NULL
     colnames(new.subject.order.table)=c("id", "subject", "timepoint")
 
@@ -350,25 +335,43 @@ is.z.stat <- function (inStatLabel) {
     return(grepl("Z$", inStatLabel, fixed=FALSE))
 }
 
-generateGraphs <- function (seed.list) {
+makeGraphTitle <- function(inLevel) {
+
+    ## graphTitle= gsub("^[0-9]+[ ]*", "", gsub("Inf", "Inferior", gsub("Gy", "Gyrus", gsub("Sup", "Superior", inLevel))))
+    graphTitle= gsub("Inf", "Inferior", gsub("Gy", "Gyrus", gsub("Sup", "Superior", inLevel)))    
+
+    return(graphTitle)
+}
+        
+generateGraphs <- function () {
 
     for (seed in seeds) {
         seedName=getSeedName(seed)
 
-        for (statLabel in statsLabels) {
-            publicationTableFilename=file.path(group.results.dir, paste("publicationTable", usedFwhm, groups, analysis, seedName, "csv", sep="."))
+        for (cor.var.itr in seq_along(regressionVariables))  {
+            regression.variable=regressionVariables[[cor.var.itr]]$variable
+            regression.name=regressionVariables[[cor.var.itr]]$name                        
+            cat("*** Running correlations for on", regression.variable, "\n")
+            
+            publicationTableFilename=file.path(group.results.dir, paste("publicationTable", usedFwhm, groups, regression.variable, seedName, "csv", sep="."))
             if (file.exists(publicationTableFilename)) {
                 file.remove(publicationTableFilename)
             }
+
+            statLabel=sprintf("timepointX%s.F", regression.variable)
             ## cat("*** Writing publication table to", publicationTableFilename, "\n")
             
             cat("####################################################################################################\n")
-            cat(sprintf("*** Graphing ROIs from the %s seed for the %s groups\n", seedName, groups))
-            cat(sprintf("Analysis=%s,StatLabel=%s\n", analysis, statLabel), file=publicationTableFilename, append=TRUE)
+            cat(sprintf("*** Graphing ROIs from the %s seed for the %s groups with the %s variable \n", seedName, groups, regression.variable))
+            cat(sprintf("StatLabel=%s, Regression Variable=%s\n", statLabel, regression.variable), file=publicationTableFilename, append=TRUE)
+            
+            infix=sprintf("fwhm%s.%s.%s.%s.%s.%s", usedFwhm, task, groups, seedName, regression.variable, statLabel)
+            ## roiStats.fwhm7.98x8.05x7.32.restingstate.MDD.BDI.II.Total.R_whole_amygdala.3mm.timepointXBDI.II.Total.F.txt
+            ## roiStats.fwhm7.98x8.05x7.32.restingstate.MDD.RADS.Total.tscore.choi_ventral_striatum_right.3mm.timepointXRADS.Total.tscore.txt
 
-            ## fwhm7.98x8.05x7.32.restingstate.mddOnly.Gender.F.and.M.R_whole_amygdala.3mm.GroupXGender.F.txt
-            infix=sprintf("fwhm%s.%s.%s.%s.%s.%s", usedFwhm, task, groups, analysis, seedName, statLabel)
 
+            ## no : roiStats.fwhm7.98x8.05x7.32.restingstate.MDD.BDI.II.Total.L_whole_amygdala.3mm.timepointXBDI.II.Total.txt: No such file or directory
+            ## yes: roiStats.fwhm7.98x8.05x7.32.restingstate.MDD.BDI.II.Total.L_whole_amygdala.3mm.timepointXBDI.II.Total.F.txt
             roistats.filename=file.path(group.results.dir, sprintf("roiStats.%s.txt", infix))            
             if (is.f.stat(statLabel) ) {
                 roistats.averageFvalue.filename=file.path(group.results.dir, sprintf("roiStats.%s.averageFvalue.txt", infix))
@@ -379,10 +382,10 @@ generateGraphs <- function (seed.list) {
             
             if(file.exists(roistats.filename)) {
             
-            ## roistats contains the avergae from the contrast in each ROI,
-            ## you do not what to graph this
-
                 roistats=readStatsTable(roistats.filename)
+                ## print(roistats)
+                ## print(class(roistats))
+                ## stop()
                 roistats$Sub.brick=NULL
                 if (is.f.stat(statLabel) ) {
                     roistats.averageFvalue=readStatsTable(roistats.averageFvalue.filename)
@@ -408,20 +411,21 @@ generateGraphs <- function (seed.list) {
                     clusterWhereAmI=readClusterLocationsTable(clusterLocationsFilename)
                 
                     ## this file stores the order of the subjects in each of the following BRIK files
-                    ## subjectOrderFilename=file.path(group.data.dir, paste("subjectOrder", groups, seedName, "csv", sep="."))
-                    ## subjectOrder=splitSubjectOrderIntoIdAndTimepoint(fixSubjectOrderTable(readSubjectOrderTable(subjectOrderFilename)))
+                    ##                     dataTable.MDD.and.NCL.L_whole_amygdala.3mm.any.timepoint.txt
+                    dataTableFilename=file.path(group.data.dir, paste("dataTable.rsfc", groups, seedName, regression.variable, "timepoint.A.and.C.txt", sep="."))
 
-                    dataTableFilename=file.path(group.data.dir, paste("dataTable.rsfc", groups, seedName, analysis, "txt", sep="."))
                     dataTable=fixDataTable(readDataTable(dataTableFilename))
-                    
-                    ## cat(sprintf("*** Read subject order data for %s unique subjects\n",  length(unique(subjectOrder$subject))))
+                    ## print(dataTable)
+                    ## stop()
                     cat(sprintf("*** Read subject order data for %s unique subjects\n",  length(unique(dataTable$Subj))))
-                    
-                    mgd=cbind(dataTable, roistats) ##, demographics[match(dataTable$Subj, demographics$ID), c("Group", "Gender")])
-                    if (any(mgd$subject=="378") ) {
-                        mgd[mgd$subject=="378", "Gender"]="F"
-                        stop("Check Gender\n")
-                    }
+
+                    mgd=cbind(dataTable, roistats) ## , demographics[match(dataTable$Subj, demographics$ID), c("Gender")])
+                    ## colnames(mgd)=c(colnames(mgd)[-length(colnames(mgd))], "Gender")
+                    ## print(mgd)
+                    ## stop()
+                    ## if (any(mgd$Subj=="378") ) {
+                    ##     mgd[mgd$Subj=="378", "Gender"]="F"
+                    ## }
                     rownames(mgd)=NULL
                     ## ensure that subject is s factor
                     mgd$Subj=as.factor(mgd$Subj)
@@ -432,113 +436,44 @@ generateGraphs <- function (seed.list) {
                     ## print(roistats)
                     ## print(mgd)
                     cat("*** Some of the mgd data frame\n")
-                    print(some(mgd))
+                    print(mgd)
                     ## stop("Check the mgd data frame\n")
-
+                    print(addmargins(table(mgd[ , c("Group", "timepoint")])))
+                    ## stop()
                     if (is.f.stat(statLabel) ) {
                         summaryColumns=unlist(strsplit(gsub(".F", "", statLabel, fixed=TRUE), "X", fixed=TRUE))
                         cat("*** The following variables will be used for the summary columns in the publication table:", paste(summaryColumns, collapse=", "), "\n")
                         publicationTable=makePublicationTable(clusterWhereAmI, clusters, mgd,
                             roistats.averageFvalue,
-                            inSummaryColumns=summaryColumns,
                             inStatColumnName="Average F value", inCom=TRUE)
 
                         cat("*** Publication table\n")
                         print(publicationTable)
                         ## savePublicationTable(publicationTable, publicationTableFilename, TRUE)
                         ## stop("Check the publication data frame\n")
+                        ## stop()
+                        ## melted.mgd=melt(mgd,  id.vars=c("Subj", summaryColumns),
+                        ##     measure.vars=paste("Mean_", seq.int(1, clusterCount), sep=""),
+                        ##     variable_name="cluster")
                         
-                        melted.mgd=melt(mgd,  id.vars=c("Subj", summaryColumns),
-                            measure.vars=paste("Mean_", seq.int(1, clusterCount), sep=""),
-                            variable_name="cluster")
+                        ## melted.mgd$cluster=factor(melted.mgd$cluster,
+                        ##     levels=c(paste("Mean_", seq.int(1, clusterCount), sep="")),
+                        ##     ## ensure that the sequence number is 2 digits
+                        ##     ## and padded with 0 if necessary. Not as
+                        ##     ## elegent as zip in python but achieves the
+                        ##     ## same result
+                        ##     apply(cbind(seq.int(1, length(clusterWhereAmI)), clusterWhereAmI), 1, function(xx) { sprintf("%02d %s", as.integer(xx[1]), xx[2]) } ))
                         
-                        melted.mgd$cluster=factor(melted.mgd$cluster,
-                            levels=c(paste("Mean_", seq.int(1, clusterCount), sep="")),
-                            ## ensure that the sequence number is 2 digits
-                            ## and padded with 0 if necessary. Not as
-                            ## elegent as zip in python but achieves the
-                            ## same result
-                            apply(cbind(seq.int(1, length(clusterWhereAmI)), clusterWhereAmI), 1, function(xx) { sprintf("%02d %s", as.integer(xx[1]), xx[2]) } ))
-                        
-                        cat("*** Some of the melted mgd data frame\n")
-                        print (some(melted.mgd))
+                        ## cat("*** Some of the melted mgd data frame\n")
+                        ## print (some(mgd))
                         ## stop("Check the melted mgd data frame\n")
 
-                        graph.f.stats(melted.mgd, groups, seedName, statLabel)
+                        graph.f.stats(mgd, groups, seedName, statLabel, regression.variable, regression.name, clusterWhereAmI)
                         
-                    } else if (is.z.stat(statLabel) ) {
-                        if (is.main.effect.contrast.z(statLabel) ) {
-                            summaryColumn=get.z.contrast.terms(statLabel)
-                            cat("*** The following variables will be used for the summary columns in the publication table:", summaryColumn, "\n")
-                            
-                            publicationTable=makePublicationTable(clusterWhereAmI, clusters, mgd,
-                                roistats.averageZvalue, roistats.averageContrastValue,
-                                inSummaryColumns=summaryColumn,
-                                inStatColumnName="Average Z value",
-                                inContrastColumnName="Average Contrast Value", inCom=TRUE)
-                            cat("*** Publication table\n")
-                            print(publicationTable)
-                            ## savePublicationTable(publicationTable, publicationTableFilename, TRUE)
-                            ## stop("Check the publication data frame\n")
-                            
-                            melted.mgd=melt(mgd,  id.vars=c("subject", summaryColumn),
-                                measure.vars=paste("Mean_", seq.int(1, clusterCount), sep=""),
-                                variable_name="cluster")
-                            
-                            melted.mgd$cluster=factor(melted.mgd$cluster,
-                                levels=c(paste("Mean_", seq.int(1, clusterCount), sep="")),
-                                ## ensure that the sequence number is 2 digits
-                                ## and padded with 0 if necessary. Not as
-                                ## elegent as zip in python but achieves the
-                                ## same result
-                                apply(cbind(seq.int(1, length(clusterWhereAmI)), clusterWhereAmI), 1, function(xx) { sprintf("%02d %s", as.integer(xx[1]), xx[2]) } ))
-                            
-                            cat("*** Some of the melted mgd data frame\n")
-                            print (some(melted.mgd))
-                            ## stop("Check the melted mgd data frame\n")
-                            
-                            graph.z.stats(melted.mgd, groups, seedName, statLabel, summaryColumn)
-                        } else if (is.interaction.contrast.z(statLabel) ) {
-                            terms=get.z.contrast.terms(statLabel)
-                            summaryColumns=convert.contrast.terms.to.factor.names(terms)
-                            ## terms[1] will always be the group and
-                            ## the remainder will be the other levels
-                            ## of the second factor
-                            cat("*** The following variables will be used for the summary columns in the publication table:", paste(summaryColumns, collapse=", "), "\n")
-                            
-                            mgd=droplevels(subset(mgd, mgd[ , summaryColumns[1]]==terms[1]))
-                            rownames(mgd)=NULL
-
-                            publicationTable=makePublicationTable(clusterWhereAmI, clusters, mgd,
-                                roistats.averageZvalue, roistats.averageContrastValue,
-                                inSummaryColumns=summaryColumns,
-                                inStatColumnName="Average Z value",
-                                inContrastColumnName="Average Contrast Value", inCom=TRUE)
-                            cat("*** Publication table\n")
-                            print(publicationTable)
-                            ## savePublicationTable(publicationTable, publicationTableFilename, TRUE)
-                            ## stop("Check the publication data frame\n")
-
-                            melted.mgd=melt(mgd,  id.vars=c("subject", summaryColumns[2]),
-                                measure.vars=paste("Mean_", seq.int(1, clusterCount), sep=""),
-                                variable_name="cluster")
-                            
-                            melted.mgd$cluster=factor(melted.mgd$cluster,
-                                levels=c(paste("Mean_", seq.int(1, clusterCount), sep="")),
-                                ## ensure that the sequence number is 2 digits
-                                ## and padded with 0 if necessary. Not as
-                                ## elegent as zip in python but achieves the
-                                ## same result
-                                apply(cbind(seq.int(1, length(clusterWhereAmI)), clusterWhereAmI), 1, function(xx) { sprintf("%02d %s", as.integer(xx[1]), xx[2]) } ))
-                            
-                            cat("*** Some of the melted mgd data frame\n")
-                            print (some(melted.mgd))
-                            ## stop("Check the melted mgd data frame\n")
-
-                            graph.z.stats(melted.mgd, groups, seedName, statLabel, summaryColumns[2])
-                        }
-                    } ## end of else if (is.z.stat(statLabel) ) {
-                } ## end of if (clusterCount > 0 ) {
+                    }
+                } else { ## end of if (clusterCount > 0 ) {
+                    cat ("*** No clusters found\n")
+                }
             } else {
                 cat("No Clusters,\n\n", file=publicationTableFilename, append=TRUE)
                 cat("*** No such file", roistats.filename, "\n")
@@ -548,207 +483,52 @@ generateGraphs <- function (seed.list) {
 } ## end of generateGraphs definition
 
 
-graph.f.stats <-function(inMeltedRoistats, inGroups, inSeed, inStatLabel) {
+graph.f.stats <-function(inRoistats, inGroups, inSeed, inStatLabel, in.rv, in.rname, clusterWhereAmI) {
 
-    imageDirectory=file.path(group.results.dir, inSeed, analysis, inStatLabel)
+    imageDirectory=file.path(group.results.dir, inSeed, inStatLabel, inGroups)
     if ( ! file.exists(imageDirectory) ) {
         dir.create(imageDirectory, recursive=TRUE)
     }
 
-    for ( level in levels(inMeltedRoistats$cluster) ) {
+    mean.columns=grep("Mean", colnames(inRoistats))
+    n.mean.column=length(mean.columns)
+    mean.column.count=1
+    for ( roi.column in mean.columns) {
 
-        ss=subset(inMeltedRoistats, cluster==level)
-
-        ## the first line is used to change the level labels to match
-        ## that used in the amygdala rsfc paper (MDD and HCL rather
-        ## than MDD and NCL)
-        levels(ss$Group)=c("MDD", "HCL")
-        ## this line is used to ensure that HCL will be listed before
-        ## MDD in the graphs
-        ss$Group = relevel(ss$Group, ref="HCL")
-        
-        imageFilename=file.path(imageDirectory, sprintf("%s.fwhm%s.%s.%s.%s.%s.pdf", gsub(" +", ".", level),  usedFwhm, task, inGroups, inSeed, inStatLabel))
+        roi.number=as.numeric(sub("Mean_", "", colnames(inRoistats)[roi.column]))
+        imageFilename=file.path(imageDirectory, sprintf("%02d.%s.fwhm%s.%s.%s.%s.%s.pdf", mean.column.count, gsub(" +", ".", clusterWhereAmI[roi.number]),  usedFwhm, task, inGroups, inSeed, inStatLabel))
         cat(paste("*** Creating", imageFilename, "\n"))
 
-        if (inStatLabel == "Group.F") {
-            roistats.summary=summarySE(ss, measurevar="value", groupvars=c("Group", "cluster"))
-            x.axis="Group"
-            y.axis="value"
-            shape="Group"
-            color="Group"
-            xlabel="Group"
-            group=1
-            plot.breaks=levels(inMeltedRoistats$Group)
-            plot.labels=levels(inMeltedRoistats$Group)
-        } else if (inStatLabel == "Gender.F" ) {
-            roistats.summary=summarySE(ss, measurevar="value", groupvars=c("Gender", "cluster"))                              
-            x.axis="Gender"
-            y.axis="value"
-            shape="Gender"
-            color="Gender"
-            xlabel="Gender"
-            group=1
-        } else if (inStatLabel == "GroupXGender.F" ) {
-            roistats.summary=summarySE(ss, measurevar="value", groupvars=c("Group", "Gender"))                  
-            x.axis="Group"
-            y.axis="value"
-            shape="Gender"
-            color="Gender"
-            group="Gender"
-            xlabel="Group"
-        } else {
-            stop(sprintf("Can't summarize the %s label. Stopping.\n", inStatLabel))
-        }
+        x.axis=in.rv
+        y.axis=colnames(inRoistats)[roi.column]
+        shape="timepoint"
+        color="timepoint"
+        group="timepoint"
+        xlabel=in.rname
 
+
+        ## print(roistats.summary)
         my.dodge=position_dodge(.2)
-
+        ## print(sprintf("*** Got to graph.f.stats %s\n", level))
         ## this works for time point or group
-        interactionGraph = ggplot(data=roistats.summary, aes_string(x=x.axis, y=y.axis, color=color, shape=shape, group=group) )
-        ## interactionGraph = interactionGraph + geom_point(position=my.dodge)
-        interactionGraph = interactionGraph + geom_point(position=my.dodge)        
-        ## interactionGraph = interactionGraph + geom_jitter(data=ss)
-        interactionGraph = interactionGraph + geom_point(data=ss)        
-        ## interactionGraph = interactionGraph + geom_errorbar(aes(ymin=value-se, ymax=value+se), width=.2, position=my.dodge)
-        interactionGraph = interactionGraph + geom_errorbar(aes(ymin=value-se, ymax=value+se), width=.2)        
-        interactionGraph = interactionGraph + scale_shape_discrete(name="Gender:")
-        interactionGraph = interactionGraph + scale_color_brewer(name="Gender:", palette="Set1")
-        interactionGraph = interactionGraph + labs(title = substituteShortLabels(level), x=xlabel, y="RSFC (Z-score)")
-        interactionGraph = interactionGraph + my.theme
-        
-        if (inStatLabel == "GroupXGender.F") {
-            ## interactionGraph=interactionGraph + geom_line(position=my.dodge)
-            interactionGraph=interactionGraph + geom_line()            
-        }
-
-        if (setequal(ss$Group, c("MDD", "HCL"))) {
-            mdd.test=t.test(ss[ss$Group=="MDD" & ss$Gender=="F", "value"],
-                                 ss[ss$Group=="MDD" & ss$Gender=="M", "value"])
-            print(mdd.test)
-            mdd.tes=tes(mdd.test$statistic,
-                      n.1=length(ss[ss$Group=="MDD" & ss$Gender=="F", "value"]),
-                      n.2=length(ss[ss$Group=="MDD" & ss$Gender=="M", "value"]), verbose=FALSE)
-
-            cat(sprintf("*** Within MDDs gender ttest: t(%0.2f)=%0.2f, p=%0.4f, Cohen's d=%0.2f\n", mdd.test$parameter, mdd.test$statistic, mdd.test$p.value,  mdd.tes$d))
-            
-            hcl.test=t.test(ss[ss$Group=="HCL" & ss$Gender=="F", "value"],
-                                  ss[ss$Group=="HCL" & ss$Gender=="M", "value"])
-            print(hcl.test)
-            hcl.tes=tes(hcl.test$statistic,
-                      n.1=length(ss[ss$Group=="HCL" & ss$Gender=="F", "value"]),
-                      n.2=length(ss[ss$Group=="HCL" & ss$Gender=="M", "value"]), verbose=FALSE)
-            cat(sprintf("*** Within HCLs gender ttest: t(%0.2f)=%0.2f, p=%0.4f, Cohen's d=%0.2f\n", hcl.test$parameter, hcl.test$statistic, hcl.test$p.value,  hcl.tes$d))
-        }
-        
-        ## print(interactionGraph)
+        graph = ggplot(data=inRoistats, aes_string(x=x.axis, y=y.axis, color=color, shape=shape, group=group) )
+        graph = graph + geom_point(position=my.dodge, size=2.5)
+        graph = graph + geom_smooth(method="lm", se=FALSE)
+        graph = graph + scale_shape_discrete(name="Timepoint:") 
+        graph = graph + scale_color_brewer(name="Timepoint:", palette="Set1")
+        graph = graph + labs(title = substituteShortLabels(clusterWhereAmI[roi.number]), x=xlabel, y="RSFC (Z-score)") 
+        graph = graph + my.theme
+        graph = graph + theme(legend.position="bottom")
+     
+        ## print(graph)
         ## stop()
-        ## ggsave(imageFilename, interactionGraph, width=3, height=3, units="in")
-        ggsave(imageFilename, interactionGraph, units="in") 
+        ## ggsave(imageFilename, graph, width=3, height=3, units="in")
+        ggsave(imageFilename, graph, units="in")
+
+        mean.column.count = mean.column.count + 1
     } ## end of for ( level in levels(roistats.summary$cluster) )
 } ## end of graphFStats
 
-
-is.main.effect.contrast.z <- function (in.stat.label) {
-    main.effects.pattern="[A-Za-z0-9]+-[A-Za-z0-9]+\\.Z"
-    return(grepl(main.effects.pattern, in.stat.label, fixed=FALSE))
-}
-
-
-is.interaction.contrast.z <- function (in.stat.label) {
-    interaction.pattern="([A-Za-z0-9]+)\\.[A-Za-z0-9]+-\\1\\.[A-Za-z0-9]+\\.Z"
-    return(grepl(interaction.pattern, in.stat.label, fixed=FALSE))
-}
-
-get.z.contrast.terms <- function (in.stat.label) {
-    if (is.main.effect.contrast.z(in.stat.label) ) {
-        if (grepl ("MDD", in.stat.label, fixed=TRUE)) {
-            return("Group")
-        } else if (grepl ("F", in.stat.label, fixed=TRUE)) {
-            return("Gender")
-        }
-    } else {
-        interaction.pattern="([A-Za-z0-9]+)\\.([A-Za-z0-9]+)-\\1\\.([A-Za-z0-9]+)\\.Z"
-        return(regmatches(in.stat.label, regexec(interaction.pattern, in.stat.label))[[1]][-1])
-    }
-}
-
-convert.contrast.terms.to.factor.names <- function (in.terms) {
-
-    retVec=vector(mode="character", length=2)
-
-    if ( in.terms[1] %in% c("MDD", "NCL"))
-        retVec[1] = "Group"
-    if ( all(in.terms[-1] %in% c("F", "M")))
-        retVec[2] = "Gender"
-
-    return (retVec)
-}
-        
-graph.z.stats <-function(inMeltedRoistats, inGroups, inSeed, inStatLabel, in.effect) {
-
-    imageDirectory=file.path(group.results.dir, inSeed, analysis, inStatLabel)
-    if ( ! file.exists(imageDirectory) ) {
-        dir.create(imageDirectory, recursive=TRUE)
-    }
-
-    for ( level in levels(inMeltedRoistats$cluster) ) {
-        
-        ss=subset(inMeltedRoistats, cluster==level)
-
-        ## the first line is used to change the level labels to match
-        ## that used in the amygdala rsfc paper (MDD and HCL rather
-        ## than MDD and NCL)
-        levels(ss$Group)=c("MDD", "HCL")
-        ## this line is used to ensure that HCL will be listed before
-        ## MDD in the graphs
-        ss$Group = relevel(ss$Group, ref="HCL")
-        
-        imageFilename=file.path(imageDirectory, sprintf("%s.fwhm%s.%s.%s.%s.%s.pdf", gsub(" +", ".", level),  usedFwhm, task, inGroups, inSeed, inStatLabel))
-        cat(paste("*** Creating", imageFilename, "\n"))
-    
-        if (in.effect == "Group") {
-            roistats.summary=summarySE(ss, measurevar="value", groupvars=c("Group", "cluster"))
-            x.axis="Group"
-            y.axis="value"
-            shape="Group"
-            color="Group"
-            xlabel="Group"
-            group=1
-            plot.breaks=levels(inMeltedRoistats$Group)
-            plot.labels=levels(inMeltedRoistats$Group)
-        } else if (in.effect == "Gender" ) {
-            roistats.summary=summarySE(ss, measurevar="value", groupvars=c("Gender", "cluster"))                              
-            x.axis="Gender"
-            y.axis="value"
-            shape="Gender"
-            color="Gender"
-            xlabel="Gender"
-            group=1
-        } else {
-            stop(sprintf("Can't summarize the %s label. Stopping.\n", in.effect))
-        }
-
-        my.dodge=position_dodge(.2)
-
-        ## this works for time point or group
-        graph=ggplot(data=roistats.summary, aes_string(x=x.axis, y=y.axis, color=color, shape=shape, group=group) ) +
-            geom_point(position=my.dodge) +
-                geom_jitter(data=ss) +
-                    geom_errorbar(aes(ymin=value-se, ymax=value+se), width=.2, position=my.dodge) +
-                        scale_shape_discrete(name=paste(shape, ":", sep="")) +
-                            scale_color_brewer(name=paste(shape, ":", sep=""), palette="Set1") +  
-                                labs(title = substituteShortLabels(level), x=xlabel, y="RSFC (Z-score)") +
-                                    my.theme
-        
-        if (inStatLabel == "GroupXGender.F") {
-            graph=graph + geom_line(position=my.dodge)
-        }
-        
-        ## print(graph)
-        
-        ## ggsave(imageFilename, interactionGraph, width=3, height=3, units="in")
-        ggsave(imageFilename, graph, units="in") 
-    } ## end of for ( level in levels(roistats.summary$cluster) )
-} ## end of graph.main.interaction.z.stats
 
 ####################################################################################################
 ### End of functions
@@ -767,12 +547,14 @@ data.dir=normalizePath(file.path(root.dir, "sanDiego/rsfcGraphAnalysis/data/"))
 admin.data.dir=normalizePath(file.path(data.dir, "admin"))
 config.data.dir=normalizePath(file.path(data.dir, "config"))
 seeds.data.dir=normalizePath(file.path(data.dir, "seeds"))
-group.data.dir=normalizePath(file.path(data.dir, "Group.data/group.by.gender.lmes"))
-group.results.dir=normalizePath(file.path(data.dir, "Group.results/group.by.gender.lmes"))
+group.data.dir=normalizePath(file.path(data.dir, "Group.data.followup"))
+group.results.dir=normalizePath(file.path(data.dir, "Group.results.followup", "new_lmes"))
 
 ## this file stores all of the demographics of interest, such as ID, group, and drug(s) of choice
 ## demographicsFilename=file.path(admin.data.dir, "0-data_entry_current_10152013.csv")
-demographicsFilename=file.path(admin.data.dir, "0-data_entry_current_2014.csv")
+## demographicsFilename=file.path(admin.data.dir, "0-data_entry_current_2014.csv")
+## demographicsFilename=file.path(admin.data.dir, "merged.demographics.and.neuropsych.csv")
+demographicsFilename=file.path(admin.data.dir, "merged.demographics.and.neuropsych.2016.11.07.csv")
 demographics=readCsvFile(demographicsFilename)
 demographics=rename(demographics, c("Grp"="Group"))
 
@@ -783,52 +565,44 @@ clust.header = c("Volume", "CM RL", "CM AP", "CM IS", "minRL",
 task="restingstate"
 usedFwhm="7.98x8.05x7.32"
 
-statsLabels=c(
-    ## Main and interaction effect F statistics follow
-    #"Group.F",
-    #"Gender.F",
-    "GroupXGender.F"#,
 
-    ## contrast related Z scores follow
-    #"MDD-NCL.Z",
-    #"M-F.Z",
-    #"MDD.F-MDD.M.Z",
-    #"NCL.F-NCL.M.Z"
-)
+##################################################
 
-groups="MDD.and.NCL"
+do.graph.creation=TRUE
+do.lmes=FALSE
 
-## "juelich_whole_amygdala_seeds.txt",
-## "short_ACC_seed_list.txt",
-## "hippocampus_ventral_striatum_seeds.txt",
-## "followup-dlpfc-ins-IP-MPFC-seeds.txt",
-## "Fox-Goldapple-seeds.txt",
-## "miller-dmn.txt",
-## "jacobs-seeds.txt",
-## "goldapple-ofc-seeds.txt",
-## "gabbay-striatum-seeds.txt",
-## "tremblay-seeds.txt"
+##################################################
 
+
+##################################################
+## analysis="all.timepoints"
+## analysis="any.timepoint"
+## analysis.methods=c("all.timepoints", "any.timepoint")
+analysis.methods=c("all.timepoints")
+
+##################################################
 ## seedFiles=
-##     sapply(c(
-##         "juelich_whole_amygdala_seeds.txt",
-##         "jacobs-seeds.txt",
-##         "gabbay-striatum-seeds.txt"
-##     ),
-##     function(xx) {
-##         file.path(config.data.dir, xx)
-##     })
+##     sapply(c("short_ACC_seed_list.txt",
+##              "juelich_whole_amygdala_seeds.txt",
+##              "hippocampus_ventral_striatum_seeds.txt",
+##              "followup-dlpfc-ins-IP-MPFC-seeds.txt"),
+##            function(xx) {
+##                file.path(config.data.dir, xx)
+##            })
 ## seeds=unlist(sapply(seedFiles, readSeedsFile))
 
-seeds=readSeedsFile(file.path(config.data.dir, "juelich_whole_amygdala_seeds.txt"))
+seeds=readSeedsFile(file.path(config.data.dir, "followup-MPFC-seeds.txt"))
+## seeds=readSeedsFile(file.path(config.data.dir, "hippocampus_ventral_striatum_seeds.txt"))
+## seeds=readSeedsFile(file.path(config.data.dir, "juelich_whole_amygdala_seeds.txt"))
+
 numberOfSeeds=length(seeds)
 
 my.base.size=14
 my.theme=
     theme_bw(base_size =  my.base.size) +
     theme(
-        ##legend.position="none",
-        legend.position="bottom",        
+        legend.position="none",
+        ## legend.position="bottom",        
         ## panel.grid.major = element_blank(),
         ## panel.grid.minor = element_blank(),
 
@@ -843,12 +617,30 @@ my.theme=
         axis.title.y = element_text(size=my.base.size, vjust=0.4, angle =  90),
         plot.title=element_text(size=my.base.size*1.2, vjust=1))
 
-output.filename=file.path(group.results.dir, paste("roi-graphing-results-output", format(Sys.time(), "%Y%m%d-%H%M%Z"), "txt", sep="."))
+####################################################################################################
+####################################################################################################
+####################################################################################################
+
+output.filename=file.path(group.results.dir, paste("clinical.lmes.results.output", format(Sys.time(), "%Y%m%d-%H%M%Z"), "txt", sep="."))
 cat("*** Output table is in ", output.filename, "\n")
 ff=file(output.filename, open="w", encoding="utf-8")
 sink(ff, append=FALSE)
 
-analysis="Gender.F.and.M"
-generateGraphs(seed.list)
+if (do.graph.creation) {
 
+    groups="MDD"
+    regressionVariables=list(
+        list(variable="MASC.tscore",        name="MASC"),
+        list(variable="BDI.II.Total",       name="BDI Inventory II"),
+        list(variable="CDI.Total",          name="CDI"),
+        list(variable="CDRS.t.score",       name="CDRS-R"),
+        list(variable="CGAS",               name="CGAS"),
+        list(variable="RADS.Total.tscore",  name="RADS")
+    )
+  
+    cat("****************************************************************************************************\n")
+    generateGraphs()    
+}
+
+## {MASC.tscore,BDI.II.Total,CDI.Total,CDRS.t.score,CGAS,RADS.Total.tscore}
 sink()

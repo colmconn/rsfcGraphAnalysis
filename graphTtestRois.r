@@ -29,7 +29,7 @@ stack <- function(){
         value=function(){ 
             return(it) 
         } 
-        ) 
+    ) 
     class(res) <- "stack" 
     res 
 }
@@ -48,15 +48,15 @@ pop <- function(stack){
 
 capwords <- function(s, strict = FALSE) {
     cap <- function(s) paste(toupper(substring(s,1,1)),
-                             {s <- substring(s,2); if(strict) tolower(s) else s},
-                             sep = "", collapse = " " )
+    {s <- substring(s,2); if(strict) tolower(s) else s},
+    sep = "", collapse = " " )
     sapply(strsplit(s, split = " "), cap, USE.NAMES = !is.null(names(s)))
 }
 
 make.significance.indications <- function(pValues, which.pValues=c(1)) {
 
     Signif=symnum(pValues, corr=FALSE, na=FALSE, cutpoints = c(0,  .001,.01, .05, .1, 1),
-        symbols   =  c("***", "**", "*", ".", " "))
+                  symbols   =  c("***", "**", "*", ".", " "))
     f=format(Signif)
 
     ## only return the first one as we're only interested in marking significant group effects
@@ -65,7 +65,7 @@ make.significance.indications <- function(pValues, which.pValues=c(1)) {
 
 substituteShortLabels <- function(inLevel) {
     returnSubstitutedLabel = gsub("[0-9]+ ", "", gsub("Inf", "Inferior", gsub("Sup", "Superior", gsub("Gy", "Gyrus",
-        gsub("^R", "Right", gsub("^L", "Left", inLevel, fixed=FALSE), fixed=FALSE), fixed=TRUE), fixed=TRUE), fixed=TRUE))
+                                                                                                      gsub("^R", "Right", gsub("^L", "Left", inLevel, fixed=FALSE), fixed=FALSE), fixed=TRUE), fixed=TRUE), fixed=TRUE))
     
     return (returnSubstitutedLabel)
 }
@@ -116,110 +116,125 @@ summarySE <- function(data=NULL, measurevar, groupvars=NULL, na.rm=FALSE,
     return(datac)
 }
 
-makePublicationTable <- function(inClusterWhereAmI, inClusters, inRoistats, inRoistats.averageStatValue=NULL, inRoistats.averageContrastValue=NULL,
-                                 inStatColumnName="Default Stat Name", inContrastColumnName="Default Contrast Name", inCom=TRUE) {
-  hemisphere=gsub("[^RL]", "", substr(inClusterWhereAmI, 1, 1))
-  ##print(hemisphere)
-  if ( inCom ) {
-      locations=cbind(gsub("^[RL] ", "", inClusterWhereAmI), hemisphere, round(inClusters[, c("Volume", "CM RL", "CM AP", "CM IS")], 0))
-  } else {
-      locations=cbind(gsub("^[RL] ", "", inClusterWhereAmI), hemisphere, round(inClusters[, c("Volume", "MI RL", "MI AP", "MI IS")], 0))
-  }
+makePublicationTable <- function(inClusterWhereAmI, inClusters,
+                                 inRoistats,
+                                 inRoistats.statValue=NULL,
+                                 inRoistats.contrastValue=NULL,
+                                 inStatColumnName="Default Stat Name",
+                                 inContrastColumnName="Default Contrast Name",
+                                 in.dof=NULL,
+                                 in.effect.type=c("d", "g"),
+                                 inCom=TRUE) {
+    
+    hemisphere=gsub("[^RL]", "", substr(inClusterWhereAmI, 1, 1))
+    ##print(hemisphere)
+    if ( inCom ) {
+        locations=cbind(gsub("^[RL] ", "", inClusterWhereAmI), hemisphere, round(inClusters[, c("Volume", "CM RL", "CM AP", "CM IS")], 0))
+    } else {
+        locations=cbind(gsub("^[RL] ", "", inClusterWhereAmI), hemisphere, round(inClusters[, c("Volume", "MI RL", "MI AP", "MI IS")], 0))
+    }
+    
+    publication.table.header=c("Structure", colnames(locations)[-1])
+    
+    if (! is.null(inRoistats.statValue) ) {
+        ## cat("Adding average t stats\n")
+        pubTable=cbind(locations, round(t(inRoistats.statValue), 2))
+        publication.table.header=c(publication.table.header, inStatColumnName)
+        
+        if ( ! is.null(in.dof)) {
+            ## print((inRoistats.statValue * 2) / sqrt(in.dof))
+            ## print("before")
+            ## print(pubTable)
+            ## ##stop()
+            in.effect.type=match.arg(in.effect.type)
+            
+            n.subjects=table(inRoistats$Group)
+            ## print(n.subjects)
+            d.values=sapply(inRoistats.statValue, function (xx) { tes(xx, n.subjects[1], n.subjects[2], verbose=FALSE)[[in.effect.type]] } )
+            
+            pubTable=cbind(pubTable, round(d.values, 3))
+            ## print("after")
+            ## print(pubTable)
 
-  ## cat("Locations: Volume and coordinates\n")
-  ## print(locations)
+            publication.table.header=c(publication.table.header,
+                                       switch(in.effect.type,
+                                              "d"="Cohen's d",
+                                              "g"="Hedge's g"))
+        }
+    }
 
-  ## cat ("Columns matching Mean: ", grep("Mean", colnames(inRoistats)), "\n")
-  ## cat ("Data from the above columns:\n")
-  ## print(inRoistats[, grep("Mean", colnames(inRoistats))])
-  ## print(list(inRoistats$Group))
-  ## agg=aggregate(inRoistats[, grep("Mean", colnames(inRoistats))], list(inRoistats$Group), mean)
+    ## now add the average of the coefficient, if it is supplied
+    if (! is.null(inRoistats.contrastValue) ) {
+        ## cat("Adding average coefficient values\n")      
+        pubTable=cbind(pubTable, round(t(inRoistats.contrastValue), 2))
+        publication.table.header=c(publication.table.header, inContrastColumnName)
+        ## print(pubTable)      
+    }
 
-  ##ddply.agg=ddply(inRoistats, .(timepoint, Group), summarise, mean)
+    ## cat("Locations: Volume and coordinates\n")
+    ## print(locations)
+
+    ## cat ("Columns matching Mean: ", grep("Mean", colnames(inRoistats)), "\n")
+    ## cat ("Data from the above columns:\n")
+    ## print(inRoistats[, grep("Mean", colnames(inRoistats))])
+    ## print(list(inRoistats$Group))
+    ## agg=aggregate(inRoistats[, grep("Mean", colnames(inRoistats))], list(inRoistats$Group), mean)
+
+    ##ddply.agg=ddply(inRoistats, .(timepoint, Group), summarise, mean)
 
 
-  ## now make a summary table with the mean of each timepoint for each
-  ## group. There will be one row for each timepoint x group with the
-  ## means for the ROIs for each timepoint x group occupying the
-  ## remaining columns
-  ddply.agg=ddply(inRoistats, .(Group, timepoint),
-      .fun=colwise(
-          .fun=function (xx) {
-              c(mean=mean(xx))
-          },
-          ## which columns to apply the function to are listed below
-          colnames(inRoistats)[grep("Mean", colnames(inRoistats))]
-          )
-      )
+    ## now make a summary table with the mean of each timepoint for each
+    ## group. There will be one row for each timepoint x group with the
+    ## means for the ROIs for each timepoint x group occupying the
+    ## remaining columns
+    ddply.agg=ddply(inRoistats, .(Group, timepoint),
+                    .fun=colwise(
+                        .fun=function (xx) {
+                            c(mean=mean(xx))
+                        },
+                        ## which columns to apply the function to are listed below
+                        colnames(inRoistats)[grep("Mean", colnames(inRoistats))]
+                    )
+                    )
 
-  
-  ## cat("ddply.agg:\n")
-  ## print(ddply.agg)
-  
-  ## cat("t(ddply.agg):\n")
-  ## print(t(ddply.agg))
+    
+    ## cat("ddply.agg:\n")
+    ## print(ddply.agg)
+    
+    ## cat("t(ddply.agg):\n")
+    ## print(t(ddply.agg))
 
-  ## now transpose the means so that there are as many rows as
-  ## columns. This is done so that it can be cbinded with the ROI
-  ## center of mass and volumes later
-  ddply.agg.means=t(ddply.agg[grep("Mean", colnames(ddply.agg))])
+    ## now transpose the means so that there are as many rows as
+    ## columns. This is done so that it can be cbinded with the ROI
+    ## center of mass and volumes later
+    ddply.agg.means=t(ddply.agg[grep("Mean", colnames(ddply.agg))])
 
-  ##print(which (! grepl("Mean", colnames(ddply.agg))))
-  ##ddply.agg[, which (! grepl("Mean", colnames(ddply.agg)))]
-  ## now make the column names for the timepoint x group 
-  cnames=apply(ddply.agg[, which (! grepl("Mean", colnames(ddply.agg)))], 1,
-      function(xx) {
-          ## xx[1] is group, xx[2] is timepoint
-          return(sprintf("%s (%s)", xx[1], xx[2]))
-      })
-  ## cat("cnames:\n")
-  ## print(cnames)
+    ##print(which (! grepl("Mean", colnames(ddply.agg))))
+    ##ddply.agg[, which (! grepl("Mean", colnames(ddply.agg)))]
+    ## now make the column names for the timepoint x group 
+    cnames=apply(ddply.agg[, which (! grepl("Mean", colnames(ddply.agg)))], 1,
+                 function(xx) {
+                     ## xx[1] is group, xx[2] is timepoint
+                     return(sprintf("%s (%s)", xx[1], xx[2]))
+                 })
+    ## cat("cnames:\n")
+    ## print(cnames)
+    publication.table.header=c(publication.table.header, cnames)
+    
+    colnames(ddply.agg.means)=cnames
+    ## cat("ddply.agg.means:\n")
+    ## print(ddply.agg.means)
 
-  colnames(ddply.agg.means)=cnames
-  ## cat("ddply.agg.means:\n")
-  ## print(ddply.agg.means)
+    mns=round(ddply.agg.means, 2)
 
-  mns=round(ddply.agg.means, 2)
-  
-  ##cat("agg: mean for each group in each ROI\n")  
-  ##print(agg)
-  ##mns=round(t(agg[, -1]), 2)
-  ##cat("mns: transposed mean for each group in each ROI\n")    
-  ##colnames(mns)=levels(agg[,1])
-  ##print(mns)
-  
-  ## cat("inRoistats.averageStatValue\n")
-  ## print (inRoistats.averageStatValue)
-  if (! is.null(inRoistats.averageStatValue) ) {
-      ## cat("Adding average t stats\n")
-      pubTable=cbind(locations, round(t(inRoistats.averageStatValue), 2))
-      ## print(pubTable)
-  } else {
-      pubTable=cbind(locations, mns)
-  }
+    pubTable=cbind(pubTable, mns)
+    colnames(pubTable)=publication.table.header
+    rownames(pubTable)=NULL
 
-  if (! is.null(inRoistats.averageStatValue) & ! is.null(inRoistats.averageContrastValue) ) {
-      ## cat("Adding average contrast values\n")      
-      pubTable=cbind(pubTable, round(t(inRoistats.averageContrastValue), 2))
-      ## print(pubTable)      
-  }
-
-  pubTable=cbind(pubTable, mns)
-  if (! is.null(inRoistats.averageStatValue) ) {
-      colnames(pubTable)=
-          c("Structure", "Hemisphere", "Volume", "CM RL", "CM AP", "CM IS", inStatColumnName, colnames(mns))
-  } else {
-      colnames(pubTable)=c("Structure", colnames(pubTable)[-1])
-  }
-
-  if (! is.null(inRoistats.averageStatValue) & ! is.null(inRoistats.averageContrastValue) ) {
-      colnames(pubTable)=
-          c("Structure", "Hemisphere", "Volume", "CM RL", "CM AP", "CM IS", inStatColumnName, inContrastColumnName, colnames(mns))
-  }
-  
-  rownames(pubTable)=NULL
-  ## print(pubTable)
-  return(pubTable)
+    ## print(pubTable)
+    ## stop()
+    
+    return(pubTable)
 }
 
 savePublicationTable <- function (inPublicationTable, inPublicationTableFilename, append=TRUE) {
@@ -230,6 +245,13 @@ savePublicationTable <- function (inPublicationTable, inPublicationTableFilename
         write.table(inPublicationTable, file=inPublicationTableFilename, quote=F, col.names=FALSE, row.names=FALSE, sep=",", append=TRUE)
     }
     cat("\n", file=inPublicationTableFilename, append=TRUE)        
+}
+
+readTstatDegreesOfFreedom <- function(inFilename) {
+    cat("*** Reading", inFilename, "\n")
+    dof=scan(inFilename, what=integer(), quiet=TRUE)
+
+    return(dof)
 }
 
 readStatsTable <- function (inFilename) {
@@ -329,8 +351,9 @@ generateGraphs <- function (seed.list) {
 
         roistats.filename=file.path(group.results.dir, sprintf("roiStats.%s.txt", infix))            
         roistats.averageTvalue.filename=file.path(group.results.dir, sprintf("roiStats.%s.averageTValue.txt", infix))
+        roistats.minmaxTvalue.filename=file.path(group.results.dir, sprintf("roiStats.%s.minmaxTValue.txt", infix))        
         roistats.averageContrastValue.filename=file.path(group.results.dir, sprintf("roiStats.%s.averageContrastValue.txt", infix))
-            
+        
         if(file.exists(roistats.filename)) {
             
             ## roistats contains the avergae from the contrast in each ROI,
@@ -340,10 +363,21 @@ generateGraphs <- function (seed.list) {
             roistats$Sub.brick=NULL
 
             roistats.averageTvalue=readStatsTable(roistats.averageTvalue.filename)
+            roistats.minmaxTvalue=readStatsTable(roistats.minmaxTvalue.filename)            
             roistats.averageContrastValue=readStatsTable(roistats.averageContrastValue.filename)
             roistats.averageTvalue$Sub.brick=NULL
-            roistats.averageContrastValue$Sub.brick=NULL                
-            
+            roistats.minmaxTvalue$Sub.brick=NULL            
+            roistats.averageContrastValue$Sub.brick=NULL
+
+            degreesOfFreedom.filename=file.path(group.results.dir, sprintf("text.%s.degreesOfFreedom.txt", infix))
+            if ( file.exists(degreesOfFreedom.filename) ) {
+                degrees.of.freedom=readTstatDegreesOfFreedom(degreesOfFreedom.filename)
+            } else {
+                cat ("*** No such file", degreesOfFreedom.filename, "\n")
+                degrees.of.freedom=NULL
+            }
+            cat("*** Degrees of freedom set to:", degrees.of.freedom, "\n")
+
             clusterCount=length(grep("Mean", colnames(roistats)))
             if (clusterCount > 0 ) {
                 cat(sprintf("*** %d ** clusters found in %s\n", clusterCount, roistats.filename))
@@ -360,7 +394,7 @@ generateGraphs <- function (seed.list) {
                 ## this file stores the order of the subjects in each of the following BRIK files
                 subjectOrderFilename=file.path(group.data.dir, paste("subjectOrder", groups, seedName, "csv", sep="."))
                 subjectOrder=splitSubjectOrderIntoIdAndTimepoint(fixSubjectOrderTable(readSubjectOrderTable(subjectOrderFilename)))
-                    
+                
                 cat(sprintf("*** Read subject order data for %s unique subjects\n",  length(unique(subjectOrder$subject))))
 
                 mgd=cbind(subjectOrder, roistats, demographics[match(subjectOrder$subject, demographics$ID), c("Group", "Gender")])
@@ -385,23 +419,63 @@ generateGraphs <- function (seed.list) {
                 ## print(roistats.averageTvalue)
                 ## print(roistats.averageContrastValue)                
                 ## print(mgd)
+                cat("*** Some of the mgd data frame\n")
                 print(some(mgd))
 
                 ## stop("Check the mgd data frame\n")
+                average.t.value.in.publication.table=FALSE
+                if (average.t.value.in.publication.table) {
+                    publicationTable=makePublicationTable(clusterWhereAmI, clusters, mgd,
+                                                          roistats.averageTvalue,
+                                                          roistats.averageContrastValue,
+                                                          inStatColumnName="Average t value",
+                                                          inContrastColumnName="Average Contrast Value",
+                                                          in.dof=degrees.of.freedom,
+                                                          in.effect.type="d",
+                                                          inCom=TRUE)
+                    ## print(publicationTable)
+                    ## stop()
+                } else {
+                    ## print(roistats.minmaxTvalue)
+                    ## print(dim(roistats.minmaxTvalue))
+                    ## print(roistats.minmaxTvalue[1, c("Min_1", "Max_1")])
+                    
+                    for (ii in seq.int(1, clusterCount)) {
+                        roi.max=max(abs(roistats.minmaxTvalue[1, paste(c("Min", "Max"), ii, sep="_")]))
+                        roi.signs=sign(roistats.minmaxTvalue[1, paste(c("Min", "Max"), ii, sep="_")])
+                        loc=which(abs(roistats.minmaxTvalue[1, paste(c("Min", "Max"), ii, sep="_")]) == roi.max)
+                        peak=roi.max * roi.signs[loc]
+                        roistats.minmaxTvalue[1, paste("Peak", ii, sep="_")]=peak
 
-                publicationTable=makePublicationTable(clusterWhereAmI, clusters, mgd, roistats.averageTvalue, roistats.averageContrastValue,
-                    inStatColumnName="Average t value", inContrastColumnName="Average Contrast Value", inCom=TRUE)
+                    }
+                    ## print(roistats.minmaxTvalue)                    
+                    roistats.peakTvalue=roistats.minmaxTvalue[, grepl("Peak", colnames(roistats.minmaxTvalue), fixed=TRUE)]
+                    ## print(roistats.peakTvalue)
+                    ## stop()
+                    publicationTable=makePublicationTable(clusterWhereAmI, clusters, mgd,
+                                                          roistats.peakTvalue,
+                                                          roistats.averageContrastValue,
+                                                          inStatColumnName="Peak t value",
+                                                          inContrastColumnName="Average Contrast Value",
+                                                          in.dof=degrees.of.freedom,
+                                                          in.effect.type="d",
+                                                          inCom=TRUE)
+                    ## print(publicationTable)
+                    ## stop()
+                }
+                ## print(publicationTable)
+                ## stop()
                 savePublicationTable(publicationTable, publicationTableFilename, TRUE)
 
                 ## print(publicationTable)
                 ## stop("Check the publication data frame\n")
                 melted.mgd=melt(mgd,  id.vars=c("subject", "Group", "timepoint"),
-                    measure.vars=paste("Mean_", seq(1, clusterCount), sep=""),
-                    variable_name="cluster")
+                                measure.vars=paste("Mean_", seq(1, clusterCount), sep=""),
+                                variable_name="cluster")
                 
                 melted.mgd$cluster=factor(melted.mgd$cluster,
-                    levels=c(paste("Mean_", seq(1, clusterCount), sep="")),
-                    labels=paste(sprintf("%02d", seq(1, clusterCount)), clusterWhereAmI))
+                                          levels=c(paste("Mean_", seq(1, clusterCount), sep="")),
+                                          labels=paste(sprintf("%02d", seq(1, clusterCount)), clusterWhereAmI))
                 
                 ## print (head((melted.mgd)))
                 ## stop("Check the melted mgd data frame\n")
@@ -445,6 +519,7 @@ graphTStats <-function(inMeltedRoistats, inGroups, inSeed) {
         cat(paste("*** Creating", imageFilename, "\n"))
         
         roistats.summary=summarySE(ss, measurevar="value", groupvars=c("Group", "cluster"))
+        print(roistats.summary)
         x.axis="Group"
         y.axis="value"
         shape="Group"
@@ -463,16 +538,19 @@ graphTStats <-function(inMeltedRoistats, inGroups, inSeed) {
         graph=ggplot(data=roistats.summary, aes_string(x=x.axis, y=y.axis, fill=color, color=color, shape=shape, group=group) ) +
             ##geom_point(position=my.dodge, size=0.5) +
             geom_bar(stat="identity") +                
-                ## geom_jitter(data=ss) +
-                    geom_errorbar(aes(ymin=value-se, ymax=value+se), width=0.5, size=1, color="black", position=my.dodge) +
-                        scale_shape_discrete(name="Group:") +
-                            scale_color_brewer(name="Group:", palette="Set1") +
-                            scale_fill_brewer(name="Group:", palette="Set1") +                                  
-                                labs(title = substituteShortLabels(level), x=xlabel, y="RSFC (Z-score)") +
-                                    my.theme 
+            ## geom_jitter(data=ss) +
+            ## geom_errorbar(aes(ymin=value-se, ymax=value+se), width=0.5, size=1, color="black", position=my.dodge) +
+            geom_errorbar(aes(ymin=value-se, ymax=value+se), width=0.5, color="black", position=my.dodge) +            
+            scale_shape_discrete(name="Group:") +
+            scale_color_brewer(name="Group:", palette="Set1") +
+            scale_fill_brewer(name="Group:", palette="Set1") +                                  
+            labs(title = substituteShortLabels(level), x=xlabel, y="RSFC (Z-score)") +
+            my.theme 
         ## print(graph)
         ## stop()
-        ggsave(imageFilename, graph, width=4, height=3.5, units="in")
+        ## ggsave(imageFilename, graph, width=4, height=3.5, units="in")
+        ggsave(imageFilename, graph, width=1.15, height=1, units="in")
+        ## stop()
         ## ggsave(imageFilename, graph, units="in")        
         ## ggsave(imageFilename, graph, units="in")
     } ## end of for ( level in levels(roistats.summary$cluster) )
@@ -495,11 +573,21 @@ data.dir=file.path(root.dir, "sanDiego/rsfcGraphAnalysis/data/")
 admin.data.dir=file.path(data.dir, "admin")
 config.data.dir=file.path(data.dir, "config")
 seeds.data.dir=file.path(data.dir, "seeds")
-#group.data.dir=file.path(data.dir, "Group.data.acc.graph.paper")
-#group.results.dir=file.path(data.dir, "Group.results.acc.graph.paper")
 
-group.data.dir=file.path(data.dir, "Group.data")
-group.results.dir=file.path(data.dir, "Group.results")
+## group.data.dir=file.path(data.dir, "Group.data")
+## group.results.dir=file.path(data.dir, "Group.results")
+
+## group.data.dir=file.path(data.dir, "Group.data.kaiser.amygdala.paper")
+## group.results.dir=file.path(data.dir, "Group.results.kaiser.amygdala.paper")
+
+## group.data.dir=file.path(data.dir, "Group.data.acc.amygdala.paper")
+## group.results.dir=file.path(data.dir, "Group.results.acc.amygdala.paper")
+
+group.data.dir=file.path(data.dir, "Group.data.baseline.all.seeds")
+group.results.dir=file.path(data.dir, "Group.results.baseline.all.seeds")
+
+## group.data.dir=file.path(data.dir, "Group.data.baseline.all.seeds.top20.low.motion")
+## group.results.dir=file.path(data.dir, "Group.results.baseline.all.seeds.top20.low.motion")
 
 ## this file stores all of the demographics of interest, such as ID, group, and drug(s) of choice
 ## demographicsFilename=file.path(admin.data.dir, "0-data_entry_current_10152013.csv")
@@ -516,8 +604,8 @@ if (r01Graphing) {
 }
 
 clust.header = c("Volume", "CM RL", "CM AP", "CM IS", "minRL",
-    "maxRL", "minAP", "maxAP", "minIS", "maxIS", "Mean", "SEM", "Max Int",
-    "MI RL", "MI AP", "MI IS")
+                 "maxRL", "minAP", "maxAP", "minIS", "maxIS", "Mean", "SEM", "Max Int",
+                 "MI RL", "MI AP", "MI IS")
 
 groups="mddOnly"
 task="restingstate"
@@ -525,20 +613,48 @@ usedFwhm="4.2"
 
 groups="mddAndCtrl"
 
+## seeds=readSeedsFile(file.path(config.data.dir, "Fox-Goldapple-seeds.txt"))
 ## seeds=readSeedsFile(file.path(config.data.dir, "juelich_amygdala_seeds_weights.txt"))
 ## seeds=readSeedsFile(file.path(config.data.dir, "Harvard-Oxford_amygdala_seeds.txt"))
-
-seeds=readSeedsFile(file.path(config.data.dir, "juelich_whole_amygdala_seeds.txt"))
-
-## seeds=readSeedsFile(file.path(config.data.dir, "kaiser_supplemental_seeds.txt"))
-
+## seeds=readSeedsFile(file.path(config.data.dir, "juelich_whole_amygdala_seeds.txt"))
+## seeds=readSeedsFile(file.path(config.data.dir, "kaiser_dlpfc_supplemental_seeds.txt"))
 ## seeds=readSeedsFile(file.path(config.data.dir, "short_ACC_seed_list.txt"))
+## seeds=readSeedsFile(file.path(config.data.dir, "miller-dmn.txt"))
+## seeds=readSeedsFile(file.path(config.data.dir, "jacobs-seeds.txt"))
+## seeds=readSeedsFile(file.path(config.data.dir, "goldapple-ofc-seeds.txt"))
+seeds=readSeedsFile(file.path(config.data.dir, "gabbay-striatum-seeds.txt"))
+## seeds=readSeedsFile(file.path(config.data.dir, "tremblay-seeds.txt"))
 
+## seeds=readSeedsFile(file.path(config.data.dir, "goldapple-vlpfc-seeds.txt"))
+## seeds=readSeedsFile(file.path(config.data.dir, "goldapple-dlpfc-seeds.txt"))
+
+## seedFiles=
+##     ## sapply(c(
+##     ##     "juelich_whole_amygdala_seeds.txt",
+##     ##     "short_ACC_seed_list.txt",
+##     ##     "hippocampus_ventral_striatum_seeds.txt",
+##     ##     "followup-dlpfc-ins-IP-MPFC-seeds.txt",
+##     ##     "Fox-Goldapple-seeds.txt",
+##     ##     "miller-dmn.txt",
+##     ##     "jacobs-seeds.txt",
+##     ##     "goldapple-ofc-seeds.txt",
+##     ##     "gabbay-striatum-seeds.txt",
+##     ##     "tremblay-seeds.txt"
+##     sapply(c(
+##         "juelich_whole_amygdala_seeds.txt",
+##         "Fox-Goldapple-seeds.txt",
+##         "jacobs-seeds.txt",
+##         "gabbay-striatum-seeds.txt"
+##     ),
+##     function(xx) {
+##         file.path(config.data.dir, xx)
+##     })
+## seeds=unlist(sapply(seedFiles, readSeedsFile))
 
 numberOfSeeds=length(seeds)
 cat(sprintf("*** Found %02d seeds in the seed file\n", length(seeds)))
 
-my.base.size=14
+my.base.size=8
 my.theme=
     theme_bw(base_size =  my.base.size) +
     theme(
@@ -553,9 +669,16 @@ my.theme=
         ## add back the axis lines
         axis.line=element_line(colour = "grey50"),
         
-        ##axis.title.x=element_blank(),
-        axis.title.x = element_text(size=my.base.size, vjust=0),
+        axis.title.x=element_blank(),
+        ## axis.title.x = element_text(size=my.base.size, vjust=0),
         axis.title.y = element_text(size=my.base.size, vjust=0.4, angle =  90),
-        plot.title=element_text(size=my.base.size*1.2, vjust=1))
+        plot.title=element_text(size=my.base.size, vjust=1))
+
+## date.tag=format(Sys.time(), "%Y%m%d.%H%M%Z")
+## output.file=file.path(group.results.dir, paste("ttest-graphing-results", date.tag, "txt", sep="."))
+## cat("*** See", output.file, "for statistics\n")
+## sink(output.file, append=FALSE)
 
 generateGraphs(seed.list)
+
+sink()

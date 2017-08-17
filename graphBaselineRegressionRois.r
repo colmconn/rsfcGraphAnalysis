@@ -190,7 +190,9 @@ makePublicationTable <- function(inClusterWhereAmI, inClusters, inRoistats,
     mns=round(t(agg[, -1]), 2)
     ## cat("mns: transposed mean for each group in each ROI\n")    
     ## colnames(mns)=levels(agg[,1])
-    publication.table.header=c(publication.table.header, levels(agg[,1]))
+    ## publication.table.header=c(publication.table.header, levels(agg[,1]))
+    cat(" ** WARNING: Adding hard coded group label (MDD) to the publication table header\n")
+    publication.table.header=c(publication.table.header, "MDD")
     
     ## print(mns)
 
@@ -254,21 +256,36 @@ readClusterLocationsTable <- function (inFilename) {
     return (clusterWhereAmI)
 }
 
-readSubjectOrderTable <- function (inFilename) {
+## readSubjectOrderTable <- function (inFilename) {
+##     cat("*** Reading", inFilename, "\n")
+##     subjectOrder=read.csv(inFilename, header=T)
+
+##     return(subjectOrder)
+## }
+
+## fixSubjectOrderTable <- function (inSubjectOrderTable) {
+##     inSubjectOrderTable$subject=gsub("_A", "", as.character(inSubjectOrderTable$subject), fixed=TRUE)
+##     inSubjectOrderTable[inSubjectOrderTable$subject=="300", "subject"] = "169/300"
+##     inSubjectOrderTable$subject=as.factor(inSubjectOrderTable$subject)
+
+##     return(inSubjectOrderTable)
+## }
+
+readDataTable <- function (inFilename) {
     cat("*** Reading", inFilename, "\n")
-    subjectOrder=read.csv(inFilename, header=T)
+    dataTable=read.table(inFilename, header=T, allowEscapes=TRUE)
 
-    return(subjectOrder)
+    return(dataTable)
 }
 
-fixSubjectOrderTable <- function (inSubjectOrderTable) {
-    inSubjectOrderTable$subject=gsub("_A", "", as.character(inSubjectOrderTable$subject), fixed=TRUE)
-    inSubjectOrderTable[inSubjectOrderTable$subject=="300", "subject"] = "169/300"
-    inSubjectOrderTable$subject=as.factor(inSubjectOrderTable$subject)
-
-    return(inSubjectOrderTable)
+fixDataTable <- function (inDataTable) {
+    inDataTable$Subj=gsub("S\\.([0-9]{3})", "\\1", as.character(inDataTable$Subj), fixed=FALSE)
+    if (any(grepl("300", inDataTable$Subj, fixed=TRUE))) {
+        inDataTable$Subj=gsub("300", "169/300", as.character(inDataTable$Subj), fixed=TRUE)
+        inDataTable$Subj=as.factor(inDataTable$Subj)
+    }
+    return(inDataTable)
 }
-
 
 ## Reads the seed file and does the (crude) equivalent of BAS variable
 ## substitution
@@ -402,7 +419,7 @@ generateGraphs <- function (group.data.dir, group.results.dir, rvVariable, rvNam
             roistats.averageCoefficientValue=readStatsTable(roistats.averageCoefficientValue.filename)
 
             degreesOfFreedom.filename=file.path(group.results.dir, sprintf("text.%s.degreesOfFreedom.txt", infix))
-            cat("*** ", degreesOfFreedom.filename, "\n")
+            cat("*** Reading", degreesOfFreedom.filename, "\n")
             
             if (bootstrapped)
                 roistats.averageBiasValue=readStatsTable(roistats.averageBiasValue.filename)
@@ -433,56 +450,55 @@ generateGraphs <- function (group.data.dir, group.results.dir, rvVariable, rvNam
                 ## this table contains the locations, as text, of the clusters and is the output of a perl script
                 clusterLocationsFilename=file.path(group.results.dir, sprintf("clusterLocations.%s.csv", infix))
                 clusterWhereAmI=readClusterLocationsTable(clusterLocationsFilename)
-                
-                ## this file stores the order of the subjects in each of the following BRIK files
-                subjectOrderFilename=file.path(group.data.dir, paste("subjectOrder", groups, seedName, "csv", sep="."))
-                subjectOrder=fixSubjectOrderTable(readSubjectOrderTable(subjectOrderFilename))
-                
-                cat(sprintf("*** Read subject order data for %s unique subjects\n",  length(unique(subjectOrder$subject))))
 
-                change.scores=read.change.score.file(rvVariable)
+                dataTableFilename=file.path(group.data.dir, paste("dataTable.rsfc", groups, seedName, rvVariable, "timepoint.A", "txt", sep="."))
+                dataTable=fixDataTable(readDataTable(dataTableFilename))
 
-                mgd=cbind(subjectOrder, roistats)
-                mgd=merge(mgd, change.scores, by.x="subject", by.y="ID", sort=FALSE)
-
-                if (! all ( mgd$subject == subjectOrder$subject) ) {
-                    stop("*** The order of the subjects in the mgd data frame is not the same as the order of subjects in subjecOrder.\n",
-                         "*** Cannot continue.\n")
+                if ( ! grepl("Group", colnames(roistats)) ) {
+                    cat("*** WARNING: Didn't find a group column in the roistats file. Adding one based on the (capitalized) groups variable\n")
+                    roistats$Group=rep(toupper(groups), dim(roistats)[1])
                 }
                 
-                if (dim(mgd)[1] != dim(subjectOrder)[1] ) {
+                ## print(dataTable)
+                ## print(roistats)
+
+                ## print(dim(dataTable))
+                ## print(dim(roistats))
+                      
+                mgd=cbind(dataTable, roistats)
+                
+                if (dim(mgd)[1] != dim(dataTable)[1] ) {
                     cat("*** The number of subjects in the merged data frame is not the same as the number of subjects in the subjectOrder file.\n")
                     cat("*** Cannot continue\n")
                     stop(status=1)
                 }
 
-                ## print(head(subjectOrder))
-                ## print(head(mgd))
+                ## print(mgd)
 
-                ss.medsAndTreatment=subset(medsAndTreatment, Timepoint=="C", select=c("SubjectNumber", "SubjID", "Timepoint", "Group", "Rx.Summary", "Tx.Summary"))
-                ## print(ss.medsAndTreatment)
+                ## ss.medsAndTreatment=subset(medsAndTreatment, Timepoint=="C", select=c("SubjectNumber", "SubjID", "Timepoint", "Group", "Rx.Summary", "Tx.Summary"))
+                ## ## print(ss.medsAndTreatment)
                 
-                ## now try to add the meds and treatment info for each subject
+                ## ## now try to add the meds and treatment info for each subject
+                ## ## mgd=cbind(mgd,
+                ## ##     medsAndTreatment[match(subjectOrder$subject, medsAndTreatment$SubjID), c("Medication", "Treatment")])
                 ## mgd=cbind(mgd,
-                ##     medsAndTreatment[match(subjectOrder$subject, medsAndTreatment$SubjID), c("Medication", "Treatment")])
-                mgd=cbind(mgd,
-                    ss.medsAndTreatment[match(subjectOrder$subject, ss.medsAndTreatment$SubjID), c("Rx.Summary", "Tx.Summary")])
-                rownames(mgd)=NULL
+                ##     ss.medsAndTreatment[match(subjectOrder$subject, ss.medsAndTreatment$SubjID), c("Rx.Summary", "Tx.Summary")])
+                ## rownames(mgd)=NULL
 
-                mgd=rename(mgd, c("Grp"="Group"))
+                ## mgd=rename(mgd, c("Grp"="Group"))
                 
-                if (any(grepl("Tx.Summary", colnames(mgd), fixed=TRUE))) {
-                    mgd=rename(mgd, c("Tx.Summary"="Treatment"))
-                }
-                if (any(grepl("Rx.Summary", colnames(mgd), fixed=TRUE))) {                
-                    mgd=rename(mgd, c("Rx.Summary"="Medication"))
-                }
+                ## if (any(grepl("Tx.Summary", colnames(mgd), fixed=TRUE))) {
+                ##     mgd=rename(mgd, c("Tx.Summary"="Treatment"))
+                ## }
+                ## if (any(grepl("Rx.Summary", colnames(mgd), fixed=TRUE))) {                
+                ##     mgd=rename(mgd, c("Rx.Summary"="Medication"))
+                ## }
                 
                 ## print(head(mgd))
                 ## print(table(mgd[, c("Medication")]))
                 ## print(table(mgd[, c("Treatment")]))                
                       
-                mgd=replaceNa(mgd, c("Medication", "Treatment"), inSubjectColumnName="subject", inGroupColumnName="Group", inReplaceNaWith=c("No Rx Info", "No Tx Info"))
+                ## mgd=replaceNa(mgd, c("Medication", "Treatment"), inSubjectColumnName="subject", inGroupColumnName="Group", inReplaceNaWith=c("No Rx Info", "No Tx Info"))
                 ## stop()
                 
                 ## cat("*** subjectOrder:\n")
@@ -540,7 +556,7 @@ generateGraphs <- function (group.data.dir, group.results.dir, rvVariable, rvNam
                     graph.variable=sub("both", "C", rvVariable, fixed=TRUE)
                 } else {
                     ## melted.mgd=melt(mgd,  id.vars=c("subject", "Group", "Gender", "DOB", "MRI", "Medication", "Treatment", rvVariable),
-                    melted.mgd=melt(mgd,  id.vars=c("subject", "Group", rvVariable),                        
+                    melted.mgd=melt(mgd,  id.vars=c("Subj", "Group", rvVariable),                        
                         measure.vars=paste("Mean_", seq(1, clusterCount), sep=""),
                         variable_name="cluster")
                     graph.variable=rvVariable
@@ -618,8 +634,8 @@ graphRegressions <- function(melted.mgd, group.results.dir, rvVariable, rvName, 
         ## print(levels(melted.mgd$Treatment))
         ## print(sub("Tx", "Treatment", sub("Info", "Information", levels(melted.mgd$Treatment), fixed=TRUE), fixed=TRUE))
 
-        graph=ggplot(ss, aes_string(x=x.axis, y=y.axis, label="subject"))
-        graph = graph + geom_smooth(method="rlm", se=FALSE, color="black", size=0.25)
+        graph=ggplot(ss, aes_string(x=x.axis, y=y.axis, label="Subj"))
+        graph = graph + stat_smooth(method="rlm", se=FALSE, color="black")
         graph = graph + labs(title = substituteShortLabels(level), x=x.axis.label, y=y.axis.label)
         graph = graph + my_theme
         
@@ -629,8 +645,8 @@ graphRegressions <- function(melted.mgd, group.results.dir, rvVariable, rvName, 
         ##     graph=graph + scale_x_continuous(labels = percent)
         ## }
 
-        graph = graph + geom_vline(xintercept=0, linetype=2)
-        graph = graph + geom_hline(yintercept=0, linetype=2)
+        ## graph = graph + geom_vline(xintercept=0, linetype=2)
+        ## graph = graph + geom_hline(yintercept=0, linetype=2)
         
         if ( indicate.treatments ) {
             cat ("*** Adding treatment indicators to graphs\n")
@@ -668,7 +684,7 @@ graphRegressions <- function(melted.mgd, group.results.dir, rvVariable, rvName, 
             ##                      ## labels=sub("Tx", "Treatment", sub("Info", "Information", levels(ss$Treatment), fixed=TRUE), fixed=TRUE)
             ##                      )
         } else {
-            graph = graph + geom_point(size=0.8)
+            graph = graph + geom_point()
         }
 
         if (in.run.correlations) {
@@ -689,8 +705,8 @@ graphRegressions <- function(melted.mgd, group.results.dir, rvVariable, rvName, 
         
         ## print(graph)
         ## stop()
-        ggsave(imageFilename, graph, width=1.45, height=1.6, units="in")
-        ## ggsave(imageFilename, graph)
+        ## ggsave(imageFilename, graph, width=4, height=3, units="in")
+        ggsave(imageFilename, graph)
         ## stop("Check graph\n")
     } ## end of for ( level in levels(roistats.summary$cluster) )
 
@@ -751,7 +767,7 @@ regressionVariables=list(
     ## list(variable="CDRS.t.score.scaled.diff",      name=expression(paste(Delta, " CDRS-R")))#,
 
     ## the line below is used for all of the preliminary data analysis for the 2017 R01 submission
-    list(variable="CDRS.t.score.diff",      name="Follow-up - Baseline CDRS-R")#,    
+    ## list(variable="CDRS.t.score.diff",      name="Follow-up - Baseline CDRS-R")#,    
 
     ## list(variable="CDRS.t.score.rstandard",        name="CDRS-R Residual")#,
 
@@ -763,7 +779,7 @@ regressionVariables=list(
     ## list(variable="MASC.tscore.scaled.diff",       name="Multidimensional Anxiety Scale for Children\n(Standardized; Baseline to 3 Months Change)"),
     ## list(variable="RADS.Total.tscore.scaled.diff", name="Reynolds Adolescent Depression Scale Total\n(Standardized; Baseline to 3 Months Change)")
 
-    ## list(variable="RADS.AN.tscore.diff", name="Follow-up - Baseline RADS Anhedonia")
+    list(variable="RADS.AN.tscore", name="Baseline RADS Anhedonia")
     
     ## list(variable="BDI.II.Total.diff",             name="Beck Depression Inventory II (A to C Change)"),
     ## list(variable="CDI.Total.diff",                name="Children's Depression Inventory (A to C Change)")
@@ -772,9 +788,9 @@ regressionVariables=list(
     ## list(variable="MASC.tscore",              name="Multidimensional Anxiety Scale\nfor Children (Standardized)")    
 )
 
-groups="mddOnly"
+groups="mdd"
 
-my.base.size=8
+my.base.size=14
 my_theme=
     theme_bw(base_size =  my.base.size) +
     theme(
@@ -792,7 +808,7 @@ my_theme=
         ##axis.title.x=element_blank(),
         axis.title.x = element_text(size=my.base.size, vjust=0),
         axis.title.y = element_text(size=my.base.size, vjust=0.4, angle =  90),
-        plot.title=element_text(size=my.base.size, vjust=1))
+        plot.title=element_text(size=my.base.size*1.2, vjust=1))
 
 ## seeds=readSeedsFile(file.path(config.data.dir, "juelich_amygdala_seeds.txt"))
 ## seeds=readSeedsFile(file.path(config.data.dir, "juelich_bla_amygdala_seeds.txt"))
@@ -820,11 +836,10 @@ my_theme=
 
 ## seedFiles=file.path(config.data.dir, "juelich_amygdala_seeds_weights.txt")
 ## seedFiles=file.path(config.data.dir, "juelich_whole_amygdala_seeds.txt")
-seedFiles=file.path(config.data.dir, "short_ACC_seed_list.txt")
 ## seedFiles=file.path(config.data.dir, "miller-dmn.txt")
 ## seedFiles=file.path(config.data.dir, "jacobs-seeds.txt")
 ## seedFiles=file.path(config.data.dir, "goldapple-ofc-seeds.txt")
-## seedFiles=file.path(config.data.dir, "gabbay-striatum-seeds.txt")
+seedFiles=file.path(config.data.dir, "gabbay-striatum-seeds.txt")
 ## seedFiles=file.path(config.data.dir, "tremblay-seeds.txt")
 
 baselineOnly=FALSE
@@ -844,10 +859,10 @@ for ( regressionVariableCount in 1:length(regressionVariables ) ) {
     group.data.dir=file.path(data.dir, paste("Group.data", rvVariable, sep="."))
     group.results.dir=file.path(data.dir, paste("Group.results", rvVariable, sep="."))##, "wholeBrain")
     
-    ## output.filename=file.path(group.results.dir, paste("clinical.rlm.results.output", format(Sys.time(), "%Y%m%d-%H%M%Z"), "txt", sep="."))
-    ## cat("*** Output table is in ", output.filename, "\n")
-    ## ff=file(output.filename, open="w", encoding="utf-8")
-    ## sink(ff, append=FALSE)
+    output.filename=file.path(group.results.dir, paste("clinical.rlm.results.output", format(Sys.time(), "%Y%m%d-%H%M%Z"), "txt", sep="."))
+    cat("*** Output table is in ", output.filename, "\n")
+    ff=file(output.filename, open="w", encoding="utf-8")
+    sink(ff, append=FALSE)
 
     for (seedFile in seedFiles) {
         
