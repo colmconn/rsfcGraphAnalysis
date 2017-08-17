@@ -7,6 +7,7 @@ library(ggplot2)
 library(robustbase)
 library(MASS)
 library(boot)
+library(compute.es)
 
 source("scoreMasc.r")
 
@@ -151,7 +152,7 @@ readStatsTable <- function (inFilename) {
     cat("*** Reading" , inFilename, "\n")
     statsTable=read.table(inFilename, header=T, sep="")
     ## dump the first column as it's only the file name
-    statsTable=statsTable[, -c(1, 2)]
+    ## statsTable=statsTable[, -c(1, 2)]
     return(statsTable)
 }
 
@@ -431,37 +432,57 @@ runCorrelations <- function (inSeed, inDataFrame, inRegressionVariables, inClust
             ## regressionFormula=as.formula(paste("value",  "~", inRegressionVariables[[j]]$variable, sep=" "))
             ## cat("*** Regression formula: ")
             ## print(regressionFormula)
-
-            df.all=   inDataFrame[inDataFrame$cluster %in% level, ]
-
-            ct.all=cor.test(df.all[, regressionVariables[[j]]$variable], df.all$value, method=inMethod)
-            ##print(ct.all)
-
-            csvLine=sprintf("%s,%s,%s,%s,%s, %.2f,%.2f,%.5f,%.2f,%s",
-                getSeedName(seed), "all", makeGraphTitle(level), paste(inClusters[clCounter, c("CM RL", "CM AP", "CM IS")], collapse=","), regressionVariables[[j]]$name, ct.all$statistic,
-                ifelse(is.null(ct.all$parameter), NA, ct.all$parameter),
-                ct.all$p.value, ct.all$estimate, make.significance.indications(ct.all$p.value))
-            ## cat(csvLine, "\n")
-            push(results.stack, csvLine)
             
+            df.all=   inDataFrame[inDataFrame$cluster %in% level, ]
+            ## print(df.all)
+            ct.all=cor.test(df.all[, regressionVariables[[j]]$variable], df.all$value, method=inMethod)
+            ## print(ct.all)
+            n.subjects=dim(df.all)[1]
+            es=res(ct.all$estimate, n=n.subjects, verbose=FALSE)
+            if (inMethod=="spearman") {
+                csvLine=sprintf("%s,%s,%s,%s,%s, %d,%.2f,%0.3f,%.2f,%.5f,%.4f,%s",
+                                getSeedName(seed), "MDD",
+                                makeGraphTitle(level),
+                                paste(inClusters[clCounter, c("CM RL", "CM AP", "CM IS")], collapse=","),
+                                regressionVariables[[j]] $name,
+                                n.subjects,
+                                ct.all$statistic,
+                                es$d,
+                                ifelse(is.null(ct.all$parameter), NA, ct.all$parameter),
+                                ct.all$p.value, ct.all$estimate,
+                                make.significance.indications(ct.all$p.value))
+            } else { 
+                csvLine=sprintf("%s,%s,%s,%s,%s, %d,t(%.2f)=%0.3f,%0.3f,%.2f,%.5f,%s",
+                                getSeedName(seed), "MDD",
+                                makeGraphTitle(level),
+                                paste(inClusters[clCounter, c("CM RL", "CM AP", "CM IS")], collapse=","),
+                                regressionVariables[[j]] $name,
+                                n.subjects,
+                                ct.all$parameter,
+                                ct.all$statistic,
+                                es$d,
+                                ct.all$p.value, ct.all$estimate,
+                                make.significance.indications(ct.all$p.value))
+            }
+            ## cat(csvLine, "\n")
+            ## stop()
+            push(results.stack, csvLine)
             clCounter=clCounter+1
             ## cat("clCounter is now", clCounter, "\n")
         } ## end of for ( level in levels(inDataFrame$cluster) )
         
-        ##stop("Stopping")
+        ## stop("Stopping")
     } ## end of for ( level in levels(roistats.summary$cluster) )
-
+    
     if ( ! is.null(results.table.filename)) {
         cat("*** Correlation table is in ", results.table.filename, "\n")
-        sink(results.table.filename, append=FALSE)
+        sink(results.table.filename, append=TRUE)
     } else {
         cat("################################################################################\n");
         cat("Correlation statistics table\n")
     }
 
     l=results.stack$value()
-    header="Seed,gender,cluster,RL,AP,IS,RegressionVariable,S,DoF,pValue,Rho,Significance"
-    cat(header, "\n")
     for (i in 1:length(l)) {
         cat (l[[i]], "\n")
     }
@@ -486,7 +507,7 @@ graphRegressions <- function (inSeed, inDataFrame, inRegressionVariables, inClus
             df.all=   inDataFrame[inDataFrame$cluster %in% level, ]
 
             ct.all=cor.test(df.all[, regressionVariables[[j]]$variable], df.all$value, method=inMethod)
-            if (ct.all$p.value < 0.05 ) {
+            if (ct.all$p.value < 0.1 ) {
             
                 ## make scatter plots for the ROIs that are significant
                 imageDirectory=file.path(group.results.dir, seedName)
@@ -507,13 +528,13 @@ graphRegressions <- function (inSeed, inDataFrame, inRegressionVariables, inClus
                 x.axis=regressionVariables[[j]]$variable
                 y.axis="value"
                 
-                graph=ggplot(df.all, aes_string(x=x.axis, y=y.axis)) +
-                    theme_bw(base_size =  my.base.size) +
-                        geom_point() +
-                            geom_smooth(method="lm", color="black") +
-                                scale_fill_brewer(palette="Set1") +
-                                    labs(title = graphTitle, y=ylabel, x=regressionVariables[[j]]$name) +
-                                        my_theme + theme(legend.position="none")
+                graph = ggplot(df.all, aes_string(x=x.axis, y=y.axis))
+                graph = graph + theme_bw(base_size =  my.base.size)
+                graph = graph + geom_point()
+                graph = graph + geom_smooth(method="lm", color="black", se=FALSE)
+                graph = graph + scale_fill_brewer(palette="Set1")
+                graph = graph + labs(title = graphTitle, y=ylabel, x=regressionVariables[[j]]$name)
+                graph = graph + my_theme + theme(legend.position="none")
                 
                 ggsave(imageFilename, graph)
             } ## end of if (ct.all$p.value < 0.05 ) {
@@ -542,10 +563,10 @@ scripts.dir=normalizePath(file.path(root.dir, "sanDiego/rsfcGraphAnalysis/script
 data.dir=normalizePath(file.path(root.dir, "sanDiego/rsfcGraphAnalysis/data/"))
 admin.data.dir=normalizePath(file.path(data.dir, "admin"))
 config.data.dir=normalizePath(file.path(data.dir, "config"))
-group.data.dir=normalizePath(file.path(data.dir, "Group.data"))
 seeds.data.dir=normalizePath(file.path(data.dir, "seeds"))
 
-group.results.dir=normalizePath(file.path(data.dir, "Group.results"))
+group.data.dir=normalizePath(file.path(data.dir, "Group.data.baseline.all.seeds"))
+group.results.dir=normalizePath(file.path(data.dir, "Group.results.baseline.all.seeds"))
 
 ####################################################################################################
 ## These variables control what barcharts are created
@@ -616,6 +637,7 @@ if (length(setdiff(selectedColumns, colnames(demographics))) != 0) {
     
 }
 
+
 regressionVariables=list(
     ## list(variable="CDRSR.diff",             name="Children's Depression Rating Scale\n(Baseline to 3 Months Change)"),
     ## list(variable="MASC.tscore.diff",       name="Multidimensional Anxiety Scale for Children\n(Standardized; Baseline to 3 Months Change)"),
@@ -630,18 +652,23 @@ regressionVariables=list(
     ## list(variable="CDI.diff",             name="Children's Depression Inventory (A to C Change)"),
     
     list(variable="MASC.tscore",        name="Multidimensional Anxiety Scale for Children (Standardized)"),
-    list(variable="CDRS.tscore",        name="Children's Depression Rating Scale (Standardized)"),
-    list(variable="CGI.CGAS",           name="Children's Global Assessment Scale"),
-    ## list(variable="RADS.Total.Tscore",  name="Reynolds Adolescent Depression Scale Total (Standardized)")
+    ## list(variable="CDRS.tscore",        name="Children's Depression Rating Scale (Standardized)"),
+    ## list(variable="CGI.CGAS",           name="Children's Global Assessment Scale"),
+    list(variable="RADS.Total.Tscore",  name="RADS Total (Standardized)"),
+    list(variable="RADS.DM.Tscore",     name="RADS Dysphoric Mood  (Standardized)"),
+    list(variable="RADS.AN.Tscore",     name="RADS Anhedonia/Negative Affect (Standardized)"),
+    list(variable="RADS.NS.Tscore",     name="RADS Negative Self-evaluation (Standardized)"),
+    list(variable="RADS.SC.Tscore",     name="RADS Somatic Complaints (Standardized)"),
+    list(variable="C_Irritability",     name="Caprara Irritability Scale"),
 
-    ## list(variable="C_Irritability", name="Caprara Irritability Scale"),
     ## list(variable="C_EmoSuscept",   name="Caprara Emotional Susceptibility Scale")
 
-    list(variable="RSQ.fixed", name="Rumination Response Styles Questionnaire")
+    list(variable="RSQ.fixed",          name="Rumination Response Styles Questionnaire")
     )
 
 ## ## extract the list of variable names from the regressionVariables list rvs=regression variables
-rvs=unlist(regressionVariables)[grep ("variable", names(unlist(regressionVariables)))]
+## rvs=unlist(regressionVariables)[grep ("variable", names(unlist(regressionVariables)))]
+rvs=sapply(regressionVariables, '[[', "variable")      
 ## ## select only the columns we want to perform regressions on from the hnrcData data frame
 ##m=match(unlist(regressionVariables)[grep ("variable", names(unlist(regressionVariables)))], colnames(demographics))
 ## ## remove NAs caused by the BDI and POMS not coming from the hnrcData frame
@@ -659,16 +686,30 @@ expectedNumberOfSubjects=101
 ## numberOfSeeds=length(seeds)
 
 ## seedFiles=
-##     sapply(c("juelich_amygdala_seeds.txt",
-##              "juelich_whole_amygdala_seeds.txt",
-##              "Harvard-Oxford_amygdala_seeds.txt"),
+##     sapply(c("juelich_whole_amygdala_seeds.txt",
+##              "short_ACC_seed_list.txt",
+##              "hippocampus_ventral_striatum_seeds.txt",
+##              "followup-dlpfc-ins-IP-MPFC-seeds.txt",
+##              "Fox-Goldapple-seeds.txt"
+##              ),
 ##            function(xx) {
 ##                file.path(config.data.dir, xx)
 ##            })
 
-## seedFiles=file.path(config.data.dir, "juelich_amygdala_seeds.txt")
+## seedFiles=file.path(config.data.dir, "juelich_whole_amygdala_seeds.txt")
+## seedFiles=file.path(config.data.dir, "miller-dmn.txt")
+## seedFiles=file.path(config.data.dir, "jacobs-seeds.txt")
+## seedFiles=file.path(config.data.dir, "goldapple-ofc-seeds.txt")
+## seedFiles=file.path(config.data.dir, "gabbay-striatum-seeds.txt")
+## seedFiles=file.path(config.data.dir, "tremblay-seeds.txt")
 
-seedFiles=file.path(config.data.dir, "juelich_amygdala_seeds_weights.txt")
+## seedFiles=file.path(config.data.dir, "goldapple-vlpfc-seeds.txt")
+seedFiles=file.path(config.data.dir, "goldapple-dlpfc-seeds.txt")
+
+results.table.filename=file.path(group.results.dir, paste("correlations", format(Sys.time(), "%Y%m%d-%H%M%Z"), "csv", sep="."))
+cat("*** Correlation table is in ", results.table.filename, "\n")
+header="Seed,Group,cluster,RL,AP,IS,RegressionVariable,n,statistic,Cohen's d,pValue,Rho,Significance\n"
+cat(header, file=results.table.filename, append=FALSE)
 
 for (seedFile in seedFiles) {
 
@@ -727,6 +768,9 @@ for (seedFile in seedFiles) {
                 ## remove the now unnecessary subject with timepoint column
                 mgd$subjectWithTimePoint=NULL
 
+                ## 378 identified as trensgender, was biologically female and not on any hormone therapy
+                mgd[mgd$subject=="378", "Gender"]="F"
+                
                 mgd$MASC.tscore=as.numeric(mgd$MASC.tscore)
                 
                 mgd=droplevels(mgd) 
@@ -745,20 +789,27 @@ for (seedFile in seedFiles) {
                     levels=c(paste("Mean_", seq(1, clusterCount), sep="")),
                     labels=paste(1:length(clusterWhereAmI), clusterWhereAmI))
 
+                ## now drop the normal controls                
+                melted.roistats=subset(melted.roistats, Grp=="MDD")
 
                 ## now drop the normal controls
-                mgd=mgd[mgd$Grp=="MDD", ]
+                ## mgd=mgd[mgd$Grp=="MDD", ]
 
+                ## print(mgd)
+                ## stop("Check the mgd data frame\n")
+                
                 ## runRegressionsForKajaWithGrpInModel(seed, melted.roistats, regressionVariables, file.path(group.results.dir, "regressionsForKaja.csv"), append=TRUE)
                 ## runRegressionsForKajaWithGrpSeparated(seed, melted.roistats, regressionVariables, file.path(group.results.dir, "regressionsForKajaSeparatedByGrp.csv"), append=TRUE)
                 
 
-                runCorrelations(seed, melted.roistats, regressionVariables, clusters, inMethod="spearman",
-                                file.path(group.results.dir, paste("correlations", seedName, "csv", sep=".")))
+                ## runCorrelations(seed, melted.roistats, regressionVariables, clusters, inMethod="spearman",
+                ##                file.path(group.results.dir, paste("correlations", seedName, "csv", sep=".")))
 
+                runCorrelations(seed, melted.roistats, regressionVariables, clusters, inMethod="pearson", results.table.filename)
+                
                 ## runCorrelations(seed, melted.roistats, regressionVariables, clusters, inMethod="spearman", NULL)
                 
-                ## graphRegressions(seed, melted.roistats, regressionVariables, clusters, inMethod="spearman")
+                graphRegressions(seed, melted.roistats, regressionVariables, clusters, inMethod="pearson")
                 
             } ## end of if (clusterCount > 0 )
         } else {

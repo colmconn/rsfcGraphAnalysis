@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# set -x 
+## set -x 
 
 # if ctrl-c is typed exit immediatly
 trap exit SIGHUP SIGINT SIGTERM
@@ -123,7 +123,10 @@ function extractNVoxels {
     #0.100  0.090  0.080  0.070  0.060  0.050  0.040  0.030  0.020  0.010
     # if using the default whole brain p values used by 3dClustSim
     # then the following if/elsif/fi statement should be uncommented
-    
+
+    pValueColumn=$( cat $clustsimPrefix.NN${nn}_${side}.1D | grep "#[ ]*pthr" | sed "s/#\s*pthr\s*|\s*//" | tr ' ' '\n' | grep -nh "\\.05"  | awk -F ':' '{print $1}' )
+
+
     # if [ $cPValue == 0.100 ] ; then
     # 	pvalueColumn=2
     # elif [ $cPValue == 0.090 ] ; then
@@ -146,11 +149,12 @@ function extractNVoxels {
     # 	pvalueColumn=11
     # fi
 
-    pvalueColumn=2
-    if [[ "X$pvalueColumn" == "X" ]] ; then
+    ## pvalueColumn=2
+    if [[ "X$pValueColumn" == "X" ]] ; then
 	nVoxels="NA"
     else
-	nVoxels=$( cat $clustsimPrefix.NN${nn}_${side}.1D | sed '/^#/d' | grep "^ $vPValue" | awk "{print \$$pvalueColumn}" )
+	pValueColumn=$( expr $pValueColumn + 1 )
+	nVoxels=$( cat $clustsimPrefix.NN${nn}_${side}.1D | sed '/^#/d' | grep "^ $vPValue" | awk "{print \$$pValueColumn}" )
     fi
     
     echo $nVoxels
@@ -341,22 +345,24 @@ for seed in $seeds ; do
 	    $tTestFile
     
     3dclust -1Dformat -nosum -dxyz=1 $rmm $nVoxels clorder.$suffix+tlrc.HEAD > clust.$suffix.txt
-
-    if [[ -f clorder.$suffix+tlrc.HEAD ]] ; then 
+    nClusters=$( 3dBrickStat -max clorder.$suffix+tlrc.HEAD 2> /dev/null | tr -d ' ' )
+    ## if [[ -f clorder.$suffix+tlrc.HEAD ]] ; then
+    if [[ $nClusters -gt 0 ]] ; then 
 
 	3dcalc -a clorder.${suffix}+tlrc.HEAD -b ${tTestFile}\[$tValueBrikId\] -expr "step(a)*b" -prefix clust.$suffix
-	
-	nClusters=$( 3dBrickStat -max clorder.$suffix+tlrc.HEAD 2> /dev/null | tr -d ' ' )
+
 	3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD $bucketFilename         > roiStats.$suffix.txt
 	#3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD $ctrlOnlyBucketFilename > roiStats.$ctrlOnlySuffix.txt
 	#3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD $mddOnlyBucketFilename  > roiStats.$mddOnlySuffix.txt
 
-	3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD ${tTestFile}\[$tContrastBrikId\]      > roiStats.$suffix.averageContrastValue.txt
-	3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD ${tTestFile}\[$tValueBrikId\]         > roiStats.$suffix.averageTValue.txt
+	3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD         ${tTestFile}\[$tContrastBrikId\] > roiStats.$suffix.averageContrastValue.txt
+	3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD         ${tTestFile}\[$tValueBrikId\]    > roiStats.$suffix.averageTValue.txt
+	3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD -minmax ${tTestFile}\[$tValueBrikId\]    > roiStats.$suffix.minmaxTValue.txt
 	
+	echo "$df" > text.$suffix.degreesOfFreedom.txt
 	3drefit -cmap INT_CMAP clorder.$suffix+tlrc.HEAD
     else
-	nClusters=0
+	## nClusters=0
 	echo "*** WARNING No clusters found!"
     fi
     echo "NA,$seedName,${usedFwhm},$tLabel,$tValueBrikId,$tThreshold,$rmm,$nVoxels,$df,$pValue,$cPvalue,$nClusters,$tTestFile" >> $csvFile
@@ -366,5 +372,5 @@ cd $scriptsDir
 ##echo "*** Making cluster location tables using Maximum intensity"
 ##./cluster2Table.pl --space=mni --force -mi $GROUP_RESULTS
 
-echo "*** Making cluster location tables using Center of Mass"
-./cluster2Table.pl --space=mni --force $GROUP_RESULTS
+#echo "*** Making cluster location tables using Center of Mass"
+#./cluster2Table.pl --space=mni --force $GROUP_RESULTS

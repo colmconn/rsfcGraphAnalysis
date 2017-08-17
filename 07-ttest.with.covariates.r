@@ -75,6 +75,17 @@ computeAge <- function(inData) {
 
     return(inData)
 }
+
+make.data.table <- function(in.mgd, in.seed.name) {
+
+    in.mgd=rename(in.mgd, c("subject"="Subj"))
+    dataTableFilename=file.path(group.data.dir, paste("dataTable", "3dttest", grouping, in.seed.name, "txt", sep="."))
+    cat("*** Writing data table to", dataTableFilename, "\n")
+    write.table(in.mgd[, c("Subj", "Group", "InputFile")], file=dataTableFilename, quote=FALSE, col.names=TRUE, row.names=FALSE)
+    
+    return (dataTableFilename)
+}
+
 ##########################################################################################################################################################################
 ### END OF FUNCTIONS #####################################################################################################################################################
 ##########################################################################################################################################################################
@@ -118,9 +129,15 @@ config.data.dir=file.path(data.dir, "config")
 
 
 
-group.data.dir=file.path(data.dir, "Group.data.afni")
-group.results.dir=file.path(data.dir, "Group.results.afni")
-analysis=""
+## group.data.dir=file.path(data.dir, "Group.data.afni")
+## group.results.dir=file.path(data.dir, "Group.results.afni")
+group.data.dir=file.path(data.dir, "Group.data.baseline.all.seeds")
+group.results.dir=file.path(data.dir, "Group.results.baseline.all.seeds")
+
+## group.data.dir=file.path(data.dir, "Group.data.baseline.all.seeds.top20.low.motion")
+## group.results.dir=file.path(data.dir, "Group.results.baseline.all.seeds.top20.low.motion")
+
+analysis="top20.low.motion"
 
 seeds.data.dir=file.path(data.dir, "seeds")
 
@@ -131,12 +148,40 @@ wasiFilename=file.path(admin.data.dir, "WASI.csv")
 wasi=readCsvFile(wasiFilename, inSubjectColumnName="SubID")
 
 ## seeds=readSeedsFile(file.path(config.data.dir, "juelich_amygdala_seeds_weights.txt"))
-
 ## seeds=readSeedsFile(file.path(config.data.dir, "kaiser_supplemental_seeds.txt"))
-
 ## seeds=readSeedsFile(file.path(config.data.dir, "short_ACC_seed_list.txt"))
+## seeds=readSeedsFile(file.path(config.data.dir, "caez_juelich_whole_amygdala_seeds.txt"))
+## seeds=readSeedsFile(file.path(config.data.dir, "juelich_whole_amygdala_seeds.txt"))
+## seeds=readSeedsFile(file.path(config.data.dir, "dlpfc_seeds.txt"))
 
-seeds=readSeedsFile(file.path(config.data.dir, "caez_juelich_whole_amygdala_seeds.txt"))
+
+## seeds=readSeedsFile(file.path(config.data.dir, "followup-dlpfc-ins-IP-MPFC-seeds.txt"))
+## seeds=readSeedsFile(file.path(config.data.dir, "miller-dmn.txt"))
+## seeds=readSeedsFile(file.path(config.data.dir, "jacobs-seeds.txt"))
+## seeds=readSeedsFile(file.path(config.data.dir, "goldapple-ofc-seeds.txt"))
+## seeds=readSeedsFile(file.path(config.data.dir, "gabbay-striatum-seeds.txt"))
+## seeds=readSeedsFile(file.path(config.data.dir, "tremblay-seeds.txt"))
+
+## seeds=readSeedsFile(file.path(config.data.dir, "goldapple-vlpfc-seeds.txt"))
+seeds=readSeedsFile(file.path(config.data.dir, "goldapple-dlpfc-seeds.txt"))
+
+## seedFiles=
+##     sapply(c(
+##         "juelich_whole_amygdala_seeds.txt",
+##         "short_ACC_seed_list.txt",
+##         "hippocampus_ventral_striatum_seeds.txt",
+##         "followup-dlpfc-ins-IP-MPFC-seeds.txt",
+##         "Fox-Goldapple-seeds.txt",
+##         "miller-dmn.txt",
+##         "jacobs-seeds.txt",
+##         "goldapple-ofc-seeds.txt",
+##         "gabbay-striatum-seeds.txt",
+##         "tremblay-seeds.txt"
+##     ),
+##     function(xx) {
+##         file.path(config.data.dir, xx)
+##     })
+## seeds=unlist(sapply(seedFiles, readSeedsFile))
 
 ## wasi.column.names=c("Verbal", "Performance", "Full")
 ## only use the WASI Full score as a covariate as perfromance and
@@ -152,8 +197,8 @@ grouping="mddAndCtrl"
 ## grouping="atAndNat"
 
 ## new.ttest.arguments=""
-## new.ttest.arguments="-resid %s \\\n-CLUSTSIM \\\n-prefix_clustsim resid.CStemp.%s \\\n-tempdir tmp.resid.clustsim.%s"
-new.ttest.arguments="-resid %s \\\n-CLUSTSIM \\\n-prefix_clustsim resid.CStemp.%s"
+## new.ttest.arguments="-resid %s \\\n-Clustsim \\\n-prefix_clustsim resid.CStemp.%s \\\n-tempdir tmp.resid.clustsim.%s"
+new.ttest.arguments="-resid %s \\\n-Clustsim \\\n-prefix_clustsim resid.CStemp.%s"
 
 
 
@@ -165,23 +210,26 @@ for (seed in seeds) {
     
     ## this file stores the order of the subjects in each of the following BRIK files
     subjectOrderFilename=file.path(group.data.dir, paste("subjectOrder", grouping, seedName, "csv", sep="."))
-    if (file.exists(subjectOrderFilename) ) {
-        subjectOrder=fixSubjectOrderTable(readSubjectOrderTable(subjectOrderFilename))
-    } else {
-        cat("*** Could not find a subject order file. Trying to load subject lists from", admin.data.dir, "\n")
+    cat("*** Trying to load subject lists from", subjectOrderFilename, "\n")
+    ## if (file.exists(subjectOrderFilename) ) {
+    subjectOrder=fixSubjectOrderTable(readSubjectOrderTable(subjectOrderFilename))
+    ## print(subjectOrder)
+    ## stop()
+    ## } ## else {
+    ##     cat("*** Could not find a subject order file. Trying to load subject lists from", admin.data.dir, "\n")
 
-        attempters=read.table(file.path(config.data.dir, "mdd.at.pilot.txt"))
-        nonAttempters=read.table(file.path(config.data.dir, "mdd.nat.pilot.txt"))
+    ##     attempters=read.table(file.path(config.data.dir, "mdd.at.pilot.txt"))
+    ##     nonAttempters=read.table(file.path(config.data.dir, "mdd.nat.pilot.txt"))
 
-        ## subjectOrder=data.frame(
-        ##     "subject"=c(as.character(attempters[, 1]), as.character(nonAttempters[, 1])))
+    ##     ## subjectOrder=data.frame(
+    ##     ##     "subject"=c(as.character(attempters[, 1]), as.character(nonAttempters[, 1])))
 
-        subjectOrder=data.frame(
-                c(as.character(attempters[, 1]), as.character(nonAttempters[, 1])),
-                c(rep("Attempter", times=length(attempters[, 1])),  rep("Non-attempter", times=length(nonAttempters[, 1])))
-            )
-        colnames(subjectOrder)=c("subject", "Group")
-    }
+    ##     subjectOrder=data.frame(
+    ##             c(as.character(attempters[, 1]), as.character(nonAttempters[, 1])),
+    ##             c(rep("Attempter", times=length(attempters[, 1])),  rep("Non-attempter", times=length(nonAttempters[, 1])))
+    ##         )
+    ##     colnames(subjectOrder)=c("subject", "Group")
+    ## }
 
     bucketListFilename=file.path(group.data.dir, paste("bucketList", grouping, seedName, "txt", sep="."))
     if (file.exists(bucketListFilename) ) {
@@ -254,20 +302,33 @@ for (seed in seeds) {
     ## pick those columns that we want to correct for in the t-tests
     mgd=mgd[, c("subject", "Group", covariate.column.names, "InputFile")]
 
+    mgd$MDD.num = ifelse(mgd$Group=="MDD", 1, 0)
+    mgd$NCL.num = ifelse(mgd$Group=="NCL", 1, 0)    
+
+    ## cat("*** The data table is as follows:\n")
+    ## print(mgd)
+    ## stop()
+    
     covariates.filename=file.path(group.data.dir, gsub("..", ".", paste("3dttest.covariates", grouping, seedName, analysis, "txt", sep="."), fixed=TRUE))
     cat("*** Writing covariates file to:", covariates.filename, "\n")
     ## the ordering of the columns in the the write command below is
     ## important. It must be subject <covariates> InputFile.
-
     write.table(mgd[, c("subject", covariate.column.names)], file=covariates.filename, quote=FALSE, col.names=TRUE, row.names=FALSE, eol="\n")
 
-    ## cat("*** The data table is as follows:\n")
-    ## print(head(mgd))
 
-    ## mask=sprintf("../mask.grey.%s.union.masked+tlrc.HEAD", grouping)
+    ## make.data.table(mgd, seedName)
+
+    
+    randomize.mat.filename=file.path(group.data.dir, gsub("..", ".", paste("randomise", grouping, seedName, analysis, "mat", sep="."), fixed=TRUE))
+    cat("*** Writing randomize mat file to:", randomize.mat.filename, "\n")
+    write.table(mgd[, c("MDD.num", "NCL.num", covariate.column.names)], file=randomize.mat.filename, quote=FALSE, col.names=FALSE, row.names=FALSE, eol="\n")
+    
+
+    mask=sprintf("../mask.grey.%s.union.masked+tlrc.HEAD", grouping)
     ## mask=sprintf("../mask.grey.%s.union.masked+tlrc.HEAD", "mddAndCtrl")
-    mask=file.path(standard.dir, "/MNI_caez_N27_brain.3mm+tlrc.HEAD")
-    prefix=sprintf("new.ttest.%s.%s.covaried", grouping, seedName)
+    ## mask=file.path(standard.dir, "/MNI_caez_N27_brain.3mm+tlrc.HEAD")
+    ## prefix=sprintf("new.ttest.%s.%s.covaried", grouping, seedName)
+    prefix=sprintf("ttest.%s.%s.covaried", grouping, seedName)    
     resid.prefix=sprintf("new.ttest.%s.%s.covaried.resid", grouping, seedName)    
 
     ## setA.group="Attempter"
@@ -287,7 +348,7 @@ for (seed in seeds) {
         ## sprintf(new.ttest.arguments, resid.prefix, seedName, seedName),
         ## three.d.ttest.arguments = sprintf("%s \\\n-mask %s \\\n-prefix %s \\\n-center NONE \\\n-setA %s %s \\\n-setB %s %s \\\n-covariates %s",
         three.d.ttest.arguments = sprintf("%s \\\n-mask %s \\\n-prefix %s \\\n-center NONE \\\n-setA %s %s \\\n-setB %s %s \\\n-covariates %s",            
-            sprintf(new.ttest.arguments, resid.prefix, seedName),            
+            "", ## sprintf(new.ttest.arguments, resid.prefix, seedName),            
             mask, prefix,
             setA.group, setA.labels.and.files,
             setB.group, setB.labels.and.files,
@@ -297,11 +358,13 @@ for (seed in seeds) {
             mask, prefix, setA.group, setA.labels.and.files, setB.group, setB.labels.and.files, covariates.filename)
     }
     
-    three.d.ttest.command.script.filename=file.path(scripts.dir, gsub("..", ".", sprintf("afni-07-ttest.withCovariates.%s.%s.%s.sh", grouping, seedName, analysis), fixed=TRUE))
+    ## three.d.ttest.command.script.filename=file.path(scripts.dir, gsub("..", ".", sprintf("afni-07-ttest.withCovariates.%s.%s.%s.sh", grouping, seedName, analysis), fixed=TRUE))
+    three.d.ttest.command.script.filename=file.path(scripts.dir, gsub("..", ".", sprintf("07-ttest.withCovariates.%s.%s.%s.sh", grouping, seedName, analysis), fixed=TRUE))    
     cat("*** Writing the 3dttest++ command to:", three.d.ttest.command.script.filename, "\n")
 
     ## full.three.d.ttest.command=sprintf("cd %s ; mkdir tmp.resid.clustsim.%s ; %s %s", group.results.dir, seedName, three.d.ttest.command, three.d.ttest.arguments)
-    full.three.d.ttest.command=sprintf("#!/bin.bash\n\nunset AFNI_COMPRESSOR \nexport OMP_NUM_THREADS=40\nmkdir -p %s/new.ttest.%s \ncd %s/new.ttest.%s \n%s %s",
+    ## full.three.d.ttest.command=sprintf("#!/bin/bash\n\nunset AFNI_COMPRESSOR \nexport OMP_NUM_THREADS=40\nmkdir -p %s/new.ttest.%s \ncd %s/new.ttest.%s \n%s %s",
+    full.three.d.ttest.command=sprintf("#!/bin/bash\n\nunset AFNI_COMPRESSOR \nexport OMP_NUM_THREADS=40\nmkdir -p %s/ttest.%s \ncd %s/ttest.%s \n%s %s",        
         group.results.dir, seedName,
         group.results.dir, seedName,        
         three.d.ttest.command, three.d.ttest.arguments)    

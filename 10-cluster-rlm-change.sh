@@ -411,13 +411,15 @@ for seed in $seeds ; do
 	    -dxyz=1 -1clust_order $rmm $nVoxels \
 	    $erode_args \
 	    ${latestRlmBucketFile}
-    3dclust -1Dformat -nosum -dxyz=1 $rmm $nVoxels clorder.$suffix+tlrc > clust.$suffix.txt
+   
     
     # 3dclust -1Dformat -savemask clorder.$suffix \
     # 	    -nosum -1thresh $tThreshold -dxyz=1 $rmm $nVoxels -overwrite \
     # 	    ${outputPrefix}+tlrc.HEAD  > clust.$suffix.txt
     
-    if [[ -f clorder.$suffix+tlrc.HEAD ]] ; then 
+    if [[ -f clorder.$suffix+tlrc.HEAD ]] ; then
+	3dclust -1Dformat -nosum -dxyz=1 $rmm $nVoxels clorder.$suffix+tlrc > clust.$suffix.txt
+	
 	3drefit -cmap INT_CMAP  clorder.$suffix+tlrc.HEAD
 
 	3dcalc -datum float -a clorder.${suffix}+tlrc.HEAD -b $latestRlmBucketFile\[$tvalueBrikId\] -expr "step(a)*b" -prefix clust.$suffix
@@ -428,7 +430,8 @@ for seed in $seeds ; do
 
 	3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD $latestRlmBucketFile\[$coefBrikId\]    > roiStats.$suffix.averageCoefficientValue.txt
 	3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD $latestRlmBucketFile\[$tvalueBrikId\]  > roiStats.$suffix.averageTValue.txt
-
+	echo "$df" > text.$suffix.degreesOfFreedom.txt
+	
 	if [[ $booted -eq 1 ]] ; then
 	    3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD $latestRlmBucketFile\[$biasBrikId\]  > roiStats.$suffix.averageBiasValue.txt
 	fi

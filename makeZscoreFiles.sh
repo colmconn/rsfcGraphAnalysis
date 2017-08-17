@@ -11,8 +11,8 @@ GETOPT=$( which getopt )
 ROOT=${MDD_ROOT:-/data/sanDiego/rsfcGraphAnalysis/}
 DATA=$ROOT/data
 
-## GROUP_DATA=$DATA/Group.data
-## GROUP_RESULTS=$DATA/Group.results
+GROUP_DATA=$DATA/Group.data
+GROUP_RESULTS=$DATA/Group.results
 
 ## GROUP_DATA=$DATA/Group.data.acc.amygdala.paper
 ## GROUP_RESULTS=$DATA/Group.results.acc.amygdala.paper
@@ -26,8 +26,8 @@ DATA=$ROOT/data
 ## GROUP_RESULTS=$DATA/Group.results.kaiser.amygdala.paper
 
 
-GROUP_DATA=$DATA/Group.data.kaiser.graph.paper
-GROUP_RESULTS=$DATA/Group.results.kaiser.graph.paper
+## GROUP_DATA=$DATA/Group.data.kaiser.graph.paper
+## GROUP_RESULTS=$DATA/Group.results.kaiser.graph.paper
 
 
 
@@ -59,13 +59,34 @@ taskFile=taskFile-mask-z-score.txt
 
 ##seedList="../data/config/juelich_whole_amygdala_seeds.txt"
 
-seedList="../data/config/kaiser_supplemental_seeds.txt"
+## seedList="../data/config/kaiser_supplemental_seeds.txt"
+## seedList="../data/config/dlpfc_seeds.txt"
 
 ## seedList="../data/config/short_ACC_seed_list.txt"
 
+# seedList="../data/config/juelich_whole_amygdala_seeds.txt
+# ../data/config/short_ACC_seed_list.txt
+# ../data/config/hippocampus_ventral_striatum_seeds.txt
+# ../data/config/followup-dlpfc-ins-IP-MPFC-seeds.txt
+# ../data/config/Fox-Goldapple-seeds.txt"
 
-seeds=$( eval echo $( cat $seedList | sed "/#/d" ) )
+## seedList="../data/config/dmn_sn_yeo7network_seeds.txt"
+
+## seedList="../data/config/miller-dmn.txt"
+## seedList="../data/config/jacobs-seeds.txt"
+## seedList="../data/config/goldapple-ofc-seeds.txt"
+## seedList="../data/config/gabbay-striatum-seeds.txt"
+
+## seedList="../data/config/tremblay-seeds.txt"
+## seedList="../data/config/goldapple-vlpfc-seeds.txt"
+seedList="../data/config/goldapple-dlpfc-seeds.txt"
+
+seeds=$( eval echo $( cat ${seedList} | sed "/#/d" ) )
 groups="mddAndCtrl"
+
+echo "Masking RSFC z-score fores for the following seeds:"
+echo $seeds
+## exit
 
 cat /dev/null > $taskFile
 
@@ -78,7 +99,10 @@ for seed in $seeds ; do
 	seedName=${seedName%%+*}
     fi
 
-    subjects=$( cat $GROUP_DATA/subjectOrder.mddAndCtrl.${seedName}.csv | sed 1d )
+    ## subjects=$( cat $GROUP_DATA/subjectOrder.mddAndCtrl.${seedName}.csv | sed 1d )
+    ## subjects=$( cat $GROUP_DATA/subjectOrder.mddAndCtrl.L_whole_amygdala.3mm.csv | sed 1d )
+
+    subjects=$( cd ../data/ ; ls -d [0-9][0-9][0-9]_{A,B,C,D,E} [0-9][0-9][0-9]_{A,B,C,D,E}2 2> /dev/null )
     for ss in $subjects ; do
 	ddir=/data/sanDiego/rsfcGraphAnalysis/data/$ss/rsfc/$seedName
 	zscoreFile=$ddir/${seedName}.z-score+tlrc.HEAD

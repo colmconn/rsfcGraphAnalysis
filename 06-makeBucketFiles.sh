@@ -199,6 +199,7 @@ makeBaselineMascBuckets=0
 
 makeCdiBuckets=0
 makeRadsBuckets=0
+makeRadsAnBuckets=0
 
 ## seedName="HO.L.amygdala.3mm"
 
@@ -207,9 +208,15 @@ seedName="L_whole_sgacc.3mm"
 
 if [[ $makeBetweenGroupBuckets == 1 ]] ; then 
 
-    GROUP_DATA=$DATA/Group.data #.kaiser.amygdala.paper
-    GROUP_RESULTS=$DATA/Group.results #.kaiser.amygdala.paper
+    ## use for the analysis with all available subjects and fro the 2017 JAD paper
+    GROUP_DATA=$DATA/Group.data.baseline.all.seeds #.kaiser.amygdala.paper
+    GROUP_RESULTS=$DATA/Group.results.baseline.all.seeds #.kaiser.amygdala.paper
 
+    ## use for the analysis with only the top 20 subjects from each
+    ## group with the least amount of motion
+    ## GROUP_DATA=$DATA/Group.data.baseline.all.seeds.top20.low.motion
+    ## GROUP_RESULTS=$DATA/Group.results.baseline.all.seeds.top20.low.motion
+    
     # ctrlSubjects="$( cat ../data/config/clean.ncl.subjectList.txt )"
     # mddSubjects="$( cat ../data/config/mdd.nat.txt )"
     # attemptSubjects="$( cat ../data/config/mdd.at.pilot.txt )"
@@ -220,8 +227,13 @@ if [[ $makeBetweenGroupBuckets == 1 ]] ; then
     ## to exmaine whether the RSFC results are highly dependent on
     ## using the subdivisions or not
     ctrlSubjects="$( cat ../data/config/clean.ncl.subjectList.txt )"
-    mddSubjects="$( cat ../data/config/clean.mdd.subjectList.txt )"
+    mddSubjects="$(  cat ../data/config/clean.mdd.subjectList.txt )"
 
+    ## use for the analysis with only the top 20 subjects from each
+    ## group with the least amount of motion
+    ## ctrlSubjects="$( cat ../data/config/top20.low.motion.ncl.subjectList.txt )"
+    ## mddSubjects="$(  cat ../data/config/top20.low.motion.mdd.subjectList.txt )"
+    
 #    ctrlSubjects="$( cat ../data/config/ncl_subjectList_npp.txt )"
 #    mddSubjects="$( cat ../data/config/mdd_subjectList_npp.txt )"
     subjects="$ctrlSubjects $mddSubjects"
@@ -521,11 +533,39 @@ if [[ $makeRadsBuckets == 1 ]] ; then
     makeFwhmFiles "ctrlOnly"   "$ctrlSubjects" $GROUP_DATA
     makeFwhmFiles "mddOnly"    "$mddSubjects"  $GROUP_DATA
     
-    ./makeGreyMatterMask.sh $GROUP_DATA $GROUP_RESULTS mddOnly $seedName
+    #./makeGreyMatterMask.sh $GROUP_DATA $GROUP_RESULTS mddOnly $seedName
     maskBuckets mddAndCtrl
     maskBuckets ctrlOnly
     maskBuckets mddOnly
 fi
+
+if [[ $makeRadsAnBuckets == 1 ]] ; then  
+    GROUP_DATA=$DATA/Group.data.RADS.AN.tscore.diff.withAandC
+    GROUP_RESULTS=$DATA/Group.results.RADS.AN.tscore.diff.withAandC
+    ctrlSubjects="$( cat ../data/config/new.ncl.subjectList.with.RADS.AN.tscore.AandC.txt )"
+    mddSubjects="$( cat ../data/config/new.mdd.subjectList.with.RADS.AN.tscore.AandC.txt )"
+    subjects="$ctrlSubjects $mddSubjects"
+    
+    [[ ! -d $GROUP_DATA ]]    && mkdir -p $GROUP_DATA
+    [[ ! -d $GROUP_RESULTS ]] && mkdir -p $GROUP_RESULTS
+
+    makeScaledDataLink $GROUP_DATA
+    
+    makeAutocorrelatedBuckets "mddAndCtrl" "$subjects"
+    makeAutocorrelatedBuckets "ctrlOnly" "$ctrlSubjects"
+    makeAutocorrelatedBuckets "mddOnly"  "$mddSubjects"
+
+    makeFwhmFiles "mddAndCtrl" "$subjects"     $GROUP_DATA
+    makeFwhmFiles "ctrlOnly"   "$ctrlSubjects" $GROUP_DATA
+    makeFwhmFiles "mddOnly"    "$mddSubjects"  $GROUP_DATA
+    
+    #./makeGreyMatterMask.sh $GROUP_DATA $GROUP_RESULTS mddOnly $seedName
+    maskBuckets mddAndCtrl
+    maskBuckets ctrlOnly
+    maskBuckets mddOnly
+fi
+
+
 
 #GROUP_DATA=$DATA/Group.data.withAandC
 #GROUP_RESULTS=$DATA/Group.results.withAandC

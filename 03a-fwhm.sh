@@ -24,7 +24,7 @@ for subject in $subjects ; do
     if [[ -f $DATA/$subject/rsfcPreprocessed/$subject.pm.cleanEPI.MNI.nii.gz ]] ; then
 	cat <<EOF > run/${subject}_run_fwhm_acf.sh
 #!/bin/bash
-
+set -x
 cd $DATA/${subject}/rsfcPreprocessed
 
 # 3dcopy ${subject}.pm.mask.gm+orig. ${subject}.pm.mask.gm.nii
@@ -35,6 +35,9 @@ cd $DATA/${subject}/rsfcPreprocessed
 # 	--warp=../anat/${subject}.std.2.MNI.warpcoef.nii.gz \
 # 	--out=${subject}.pm.mask.gm.MNI
 
+#censor_file=$DATA/$subject/rsfcPreprocessed/${subject}.pm.censor.1D
+#good_trs="\$( $scriptsDir/censor_to_good_list.r \$censor_file )"
+#3dFWHMx -ACF -combine -detrend -mask ${subject}.mask.grey.MNI.nii.gz ${subject}.pm.cleanEPI.MNI.nii.gz"[\${good_trs}]" > ${subject}.cleanEPI.blur.est.1D
 3dFWHMx -ACF -combine -detrend -mask ${subject}.mask.grey.MNI.nii.gz ${subject}.pm.cleanEPI.MNI.nii.gz > ${subject}.cleanEPI.blur.est.1D
  
 EOF
@@ -75,7 +78,7 @@ exit
 #$ -V 
 
 nTasks=$( cat $taskFile | wc -l )
-
+exit
 rm -f $ROOT/log/acf-est.log
 sge_command="qsub -N acf-est -q all.q -j y -m n -V -wd $( pwd ) -o $ROOT/log/acf-est.log -t 1-$nTasks" 
 echo $sge_command

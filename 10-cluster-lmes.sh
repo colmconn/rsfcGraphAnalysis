@@ -10,16 +10,18 @@ programName=`basename $0`
 GETOPT=$( which getopt )
 ROOT=${MDD_ROOT:-/data/sanDiego/rsfcGraphAnalysis}
 DATA=$ROOT/data
-GROUP_DATA=$DATA/Group.data
-GROUP_RESULTS=$DATA/Group.results
+GROUP_DATA=$DATA/Group.data.followup
+GROUP_RESULTS=$DATA/Group.results.followup
 MDD_STANDARD=$ROOT/standard
 MDD_TISSUEPRIORS=$ROOT/tissuepriors
 scriptsDir=${ROOT}/scripts
 logDir=${DATA}/log
 
 task="restingstate"
+shortTask="rsfc"
 
-groups="mddAndCtrl"
+# groups="MDD.and.NCL"
+# groups="MDD"
 
 function makeBucketFilePrefix {
     local group=$1
@@ -28,7 +30,7 @@ function makeBucketFilePrefix {
 
     ## restingstate",        groups, seedName, "lme.bucket",       sep=".")
     if [[ ! -z "$analysis" ]] ;then 
-	prefix="restingstate.${group}.${analysis}.${seedName}.lme.bucket"
+	prefix="restingstate.${analysis}.${group}.${seedName}.3dlme.bucket"
     else 
 	prefix="restingstate.${group}.${seedName}.lme.bucket"
     fi
@@ -131,7 +133,7 @@ function extractNVoxels {
     echo $nVoxels
 }
 
-GETOPT_OPTIONS=$( $GETOPT  -o "l:is:n:op:c:" --longoptions "seedlist:,useInherentSmoothness,svc:,nn:,overwrite,pvalue:,cpvalue:" -n ${programName} -- "$@" )
+GETOPT_OPTIONS=$( $GETOPT  -o "a:g:l:is:n:op:c:" --longoptions "analysis:,groups:,seedlist:,useInherentSmoothness,svc:,nn:,overwrite,pvalue:,cpvalue:" -n ${programName} -- "$@" )
 exitStatus=$?
 if [ $exitStatus != 0 ] ; then 
     echo "Error with getopt. Terminating..." >&2 
@@ -145,6 +147,10 @@ overwrite=0
 eval set -- "$GETOPT_OPTIONS"
 while true ; do 
     case "$1" in
+	-a|--analysis)
+	    analysis="$2"; shift 2 ;;
+	-g|--groups)
+	    groups="$2"; shift 2 ;;
 	-l|--seedlist)
 	    seedList=$2; shift 2 ;;
 	-p|--pvalue)
@@ -209,6 +215,18 @@ if [[ $cleaned -eq 1 ]] ; then
 
 fi
 
+if [[ "x$analysis" == "x" ]] ; then
+    ## voxelwise pvalue
+    echo "*** No value for analysis provided. Exiting"
+    exit 1
+fi
+
+if [[ "x$groups" == "x" ]] ; then
+    ## voxelwise pvalue
+    echo "*** No value for groups provided. Exiting"
+    exit 1
+fi
+
 if [[ "x$pValue" == "x" ]] ; then
     ## voxelwise pvalue
     pValue=0.05
@@ -220,7 +238,7 @@ fi
 if [[ "x$cPvalue" == "x" ]] ; then
     # clusterwise pvalue
     cPvalue=0.050
-    echo "*** Set whole brain pvalue to $cPvalue (default)"	    
+    echo "*** Set whole brain pvalue to $cPvalue (default)"
 else
     useFirstColumn=1
     echo "*** Set whole brain pvalue to $cPvalue"    
@@ -235,16 +253,17 @@ if [ $useInherentSmoothness -eq 1 ] ; then
 	usedFwhm=4.2
     fi
 else 
-    usedFwhm=4.2
+    usedFwhm=7.98x8.05x7.32
 fi
 
 echo "*** Correcting for $usedFwhm mm smoothness"
 
 cd $GROUP_RESULTS
 
-analysis="group.and.gender" 
 csvFile=parameters.fwhm${usedFwhm}.$groups.csv
-echo "analysis,seed,fwhm,f/zLabel,f/zValueBrikId,f/zThreshold,rmm,nVoxels,df,pValue,cPvalue,nClusters,bucketFile" > $csvFile
+if [[ ! -f $csvFile ]] ; then 
+    echo "analysis,seed,fwhm,f/zLabel,f/zValueBrikId,f/zThreshold,rmm,nVoxels,df,pValue,cPvalue,nClusters,bucketFile" > $csvFile
+fi
 
 for seed in $seeds ; do
 	
@@ -258,13 +277,13 @@ for seed in $seeds ; do
     echo "####################################################################################################"
     echo "### Seed is: $seedName"
     
-    bucketFilename=$GROUP_DATA/$task.bucket.$groups.${seedName}.masked+tlrc.HEAD
-    ctrlOnlyBucketFilename=$GROUP_DATA/$task.bucket.ctrlOnly.${seedName}.masked+tlrc.HEAD
-    mddOnlyBucketFilename=$GROUP_DATA/$task.bucket.mddOnly.${seedName}.masked+tlrc.HEAD
+    dataTableFilename=$GROUP_DATA/dataTable.${shortTask}.${groups}.${seedName}.${analysis}.txt
+    ## ctrlOnlyBucketFilename=$GROUP_DATA/$task.bucket.ctrlOnly.${seedName}.masked+tlrc.HEAD
+    ## mddOnlyBucketFilename=$GROUP_DATA/$task.bucket.mddOnly.${seedName}.masked+tlrc.HEAD
     
-    if [[ ! -f $bucketFilename ]] ; then
+    if [[ ! -f $dataTableFilename ]] ; then
 	pwd
-	echo "*** ERROR cannot find $bucketFilename. Exiting"
+	echo "*** ERROR cannot find $dataTableFilename. Exiting"
 	exit
     fi
     
@@ -283,22 +302,25 @@ for seed in $seeds ; do
 
     side="1sided"
     
-    cstempPrefix=$( makeClustSimFilePrefix $groups $usedFwhm $pValue $cPvalue)
+    cstempPrefix=$( makeClustSimFilePrefix $groups $usedFwhm $pValue $cPvalue )
+    ## cstempPrefix=CStemp.fwhmxyz7.98x8.05x7.32
     if [[ ! -f ${cstempPrefix}.NN${NN}_${side}.1D ]] ; then
-	echo "*** Running 3dClustSim"
-	echo "*** Output will be saved to files begining with: $cstempPrefix"
-	export OMP_NUM_THREADS=40
-	if [[ -f $GROUP_RESULTS/mask.grey.$groups.union.masked+tlrc.HEAD ]] ; then 
-	    3dClustSim -mask $GROUP_RESULTS/mask.grey.$groups.union.masked+tlrc.HEAD -fwhm ${usedFwhm} -both -prefix ${cstempPrefix}  -pthr $pValue -athr $cPvalue
-	else 
-	    3dClustSim -mask $MDD_STANDARD/MNI152_T1_3mm_brain_mask.nii.gz  -fwhm ${usedFwhm} -both -prefix ${cstempPrefix}  -pthr $pValue -athr $cPvalue
-	fi
+    	echo "*** Running 3dClustSim"
+    	echo "*** Output will be saved to files begining with: $cstempPrefix"
+    	export OMP_NUM_THREADS=40
+    	if [[ -f $GROUP_RESULTS/mask.grey.$groups.union.masked+tlrc.HEAD ]] ; then
+	    echo "*** Using mask.grey.$groups.union.masked+tlrc.HEAD as mask in 3dClustSim run"
+    	    3dClustSim -mask $GROUP_RESULTS/mask.grey.$groups.union.masked+tlrc.HEAD -fwhm ${usedFwhm} -both -prefix ${cstempPrefix}  -pthr $pValue -athr $cPvalue -nodec
+    	else
+	    echo "*** Using MNI152_T1_3mm_brain_mask.nii.gz as mask in 3dClustSim run"
+    	    3dClustSim -mask $MDD_STANDARD/MNI152_T1_3mm_brain_mask.nii.gz  -fwhm ${usedFwhm} -both -prefix ${cstempPrefix}  -pthr $pValue -athr $cPvalue -nodec
+    	fi
 
-	mv -f 3dClustSim.cmd ${cstempPrefix}.3dClustSim.cmd
+    	mv -f 3dClustSim.cmd ${cstempPrefix}.3dClustSim.cmd
     fi
-    addStatTableCmd="$( cat ${cstempPrefix}.3dClustSim.cmd ) $latestLmeBucketFile"
-    echo "*** Statistic table addition command is: $addStatTableCmd"
-    eval "$addStatTableCmd"
+    # addStatTableCmd="$( cat ${cstempPrefix}.3dClustSim.cmd ) $latestLmeBucketFile"
+    # echo "*** Statistic table addition command is: $addStatTableCmd"
+    # eval "$addStatTableCmd"
 
     ## ####################################################################################################
     ## Clustering begins in ernest here
@@ -334,8 +356,8 @@ for seed in $seeds ; do
 	echo "### corrected  pValue = $cPvalue"
 
 	suffix=fwhm${usedFwhm}.$task.$groups.$analysis.$seedName.$fixedFLabel
-	#mddOnlySuffix=fwhm${usedFwhm}.$task.mddOnly.$seedName.$fixedFLabel
-	#ctrlOnlySuffix=fwhm${usedFwhm}.$task.ctrlOnly.$seedName.$fixedFLabel
+	mddOnlySuffix=fwhm${usedFwhm}.$task.mddOnly.$analysis.$seedName.$fixedFLabel
+	ctrlOnlySuffix=fwhm${usedFwhm}.$task.ctrlOnly.$analysis.$seedName.$fixedFLabel
 	
 	# #3dclust -1Dformat -savemask clorder.$suffix -nosum -1dindex $fValueBrikId -1tindex $fValueBrikId -1noneg -2thresh -$fThreshold $fThreshold \
 	# #    -dxyz=1 $rmm $nVoxels $latestLmeBucketFile  > clust.$suffix.txt
@@ -347,11 +369,13 @@ for seed in $seeds ; do
 
 	    3dcalc -a clorder.${suffix}+tlrc.HEAD -b ${latestLmeBucketFile}\[$fValueBrikId\] -expr "step(a)*b" -prefix clust.$suffix
 
-	    nClusters=$( 3dBrickStat -max clorder.$suffix+tlrc.HEAD 2> /dev/null | tr -d ' ' )
+	    nClusters=$( 3dBrickStat -max clorder.$suffix+tlrc.HEAD 2> /dev/null | awk '{print $1}' )
 
-	    3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD $bucketFilename         > roiStats.$suffix.txt
-	    #3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD $ctrlOnlyBucketFilename > roiStats.$ctrlOnlySuffix.txt
-	    #3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD $mddOnlyBucketFilename  > roiStats.$mddOnlySuffix.txt
+	    3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD $( tail -n +2 $dataTableFilename |            awk '{ print $4 }' ) > roiStats.$suffix.txt
+	    if [[ $( grep -c NCL $dataTableFilename ) -gt 0 ]] ; then 
+		3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD $( tail -n +2 $dataTableFilename | grep NCL | awk '{ print $4 }' ) > roiStats.$ctrlOnlySuffix.txt
+	    fi
+	    3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD $( tail -n +2 $dataTableFilename | grep MDD | awk '{ print $4 }' ) > roiStats.$mddOnlySuffix.txt
 	    
 	    3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD ${latestLmeBucketFile}\[$fValueBrikId\]         > roiStats.$suffix.averageFvalue.txt
 
@@ -408,7 +432,7 @@ for seed in $seeds ; do
 
 	    3dcalc -a clorder.${suffix}+tlrc.HEAD -b ${latestLmeBucketFile}\[$zContrastBrikId\] -expr "step(a)*b" -prefix clust.$suffix
   
-	    nClusters=$( 3dBrickStat -max clorder.$suffix+tlrc.HEAD 2> /dev/null | tr -d ' ' )
+	    nClusters=$( 3dBrickStat -max clorder.$suffix+tlrc.HEAD 2> /dev/null | awk '{print $1}' )
 	    3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD $bucketFilename         > roiStats.$suffix.txt
 	    #3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD $ctrlOnlyBucketFilename > roiStats.$ctrlOnlySuffix.txt
 	    #3dROIstats -nobriklab -mask clorder.$suffix+tlrc.HEAD $mddOnlyBucketFilename  > roiStats.$mddOnlySuffix.txt

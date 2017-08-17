@@ -58,8 +58,8 @@ function makeDirectoryList {
     for subject in $subjects ; do
 cleanedEpiFile=$DATA/$subject/${task}Preprocessed/${subject}.pm.cleanEPI.MNI.nii.gz
 	if [[ ! -f $DATA/$subject/${task}Preprocessed/00_DO_NOT_ANALYSE_${subject}_${excessiveMotionThresholdPercentage}percent.txt ]] ; then
-	    if [[ -d $DATA/$subject/${task}/yeo7split4matthew ]] ; then
-		echo $subject/${task}/yeo7split4matthew/ >> $directoryListFile
+	    if [[ -d $DATA/$subject/${task}NoBP/yeo7lib ]] ; then
+		echo $subject/${task}NoBP/yeo7lib/ >> $directoryListFile
 #	echo "$i, Include, $subject"
 		(( i=i+1 ))
 	    else
@@ -79,13 +79,14 @@ cleanedEpiFile=$DATA/$subject/${task}Preprocessed/${subject}.pm.cleanEPI.MNI.nii
 #subjects=$( cd $DATA; \ls -1d *_[ABC] )
 #subjects="364_A 364_C 370_A 421_A"
 #subjects="$( cat /data/sanDiego/rsfcGraphAnalysis/data/config/estop.subjList.txt )"
-subjects="$( cat /data/sanDiego/rsfcGraphAnalysis/data/config/rs114a.subj.txt )"
-task=rsfc
-#task=estop
-cat /dev/null > rm.${task}.yeo7split4matt.txt
-makeDirectoryList "$subjects" ${task} rm.${task}.yeo7split4matt.txt
+## subjects="$( cat /data/sanDiego/rsfcGraphAnalysis/data/config/rs114a.subj.txt )"
+subjects="$( cat ../data/config/flex.rsfc.mddAndCtrl.csv )"
+#task=rsfc
+task=estop
+cat /dev/null > rm.${task}.yeo7splitEstopNoBP.txt
+makeDirectoryList "$subjects" ${task} rm.${task}.yeo7splitEstopNoBP.txt
 echo -n "Making tarball..."
-(cd $DATA/; tar czf ${task}.yeo7split.tar.gz $( cat ../scripts/rm.${task}.yeo7split4matt.txt ) )
+(cd $DATA/; tar czf ${task}.yeo7split.tar.gz $( cat ../scripts/rm.${task}.yeo7splitEstopNoBP.txt ) )
 echo "Done"
 
 # subjects="$( cat /data/sanDiego/cESTOP/data/config/clean.estop.subjList.txt /data/sanDiego/cESTOP/data/config/clean.estop.mddfollowup.txt  )"

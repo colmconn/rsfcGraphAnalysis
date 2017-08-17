@@ -15,180 +15,180 @@ scriptsDir="/data/sanDiego"
 
 
 if [[ $# -gt 0 ]] ; then
-subjects="$*"
+    subjects="$*"
 else
-subjects="$( cat ../data/config/ncl.subjectList.txt ../data/config/mdd.subjectList.txt )"
+    subjects="$( cat ../data/config/ncl.subjectList.txt ../data/config/mdd.subjectList.txt )"
 fi
 
 function reconstructAnatomy {
-subject=$1
-dicomTask=FSPGR_SAG_TI550
+    subject=$1
+    dicomTask=FSPGR_SAG_TI550
 
-subjectDicomContainerDir=$dataRoot/$subject
-if [ -d $subjectDicomContainerDir ] ; then
-if [ -f $subjectDicomContainerDir/sinfo.txt ] ; then
-## not that the tail -1 in the next line implements that assumption
-## that in the case of their being multiple runs of the same task that
-## the final one is the correct one to use
-sdir=$( cat $subjectDicomContainerDir/sinfo.txt | grep -i $dicomTask | tail -1 | awk '{print $1}' )
-else
-(cd $subjectDicomContainerDir; ../scheck )
-#echo "*** Could not find $subjectDicomContainerDir/sinfo.txt from which to determine the correct s-directory containing the DICOMS for the $task task"
-#echo "*** Please provide the s-directory name (enter Ctrl-C to quit at this point if you do not know the correct s-directory)"
-#read sdir
-##echo "** There are ${#sdir} characters in the entered text"
-##exit
-fi
+    subjectDicomContainerDir=$dataRoot/$subject
+    if [ -d $subjectDicomContainerDir ] ; then
+	if [ -f $subjectDicomContainerDir/sinfo.txt ] ; then
+	    ## not that the tail -1 in the next line implements that assumption
+	    ## that in the case of their being multiple runs of the same task that
+	    ## the final one is the correct one to use
+	    sdir=$( cat $subjectDicomContainerDir/sinfo.txt | grep -i $dicomTask | tail -1 | awk '{print $1}' )
+	else
+	    (cd $subjectDicomContainerDir; ../scheck )
+	    #echo "*** Could not find $subjectDicomContainerDir/sinfo.txt from which to determine the correct s-directory containing the DICOMS for the $task task"
+	    #echo "*** Please provide the s-directory name (enter Ctrl-C to quit at this point if you do not know the correct s-directory)"
+	    #read sdir
+	    ##echo "** There are ${#sdir} characters in the entered text"
+	    ##exit
+	fi
 
-if [ ${#sdir} -gt 0 ] && [ -d  $subjectDicomContainerDir/$sdir ] ; then
-echo "*** Resequencing the i files in $subjectDicomContainerDir/$sdir"
-( cd $subjectDicomContainerDir/; $scriptsDir/imseq $sdir )
+	if [ ${#sdir} -gt 0 ] && [ -d  $subjectDicomContainerDir/$sdir ] ; then
+	    echo "*** Resequencing the i files in $subjectDicomContainerDir/$sdir"
+	    ( cd $subjectDicomContainerDir/; $scriptsDir/imseq $sdir )
 
-session=$dataRoot/${subject}BRIKS
-if [ ! -d $session ] ; then
-echo "*** $session does not exist. Creating it now"
-mkdir -p $session
-fi
+	    session=$dataRoot/${subject}BRIKS
+	    if [ ! -d $session ] ; then
+		echo "*** $session does not exist. Creating it now"
+		mkdir -p $session
+	    fi
 
-prefix="$subject"
-if [ ! -f $session/$prefix+orig.HEAD ] ; then
-echo "*** Now creating AFNI HEAD/BRIK for T1 anatomy of $subject"
-echo "*** Prefix will be $prefix"
-( cd $subjectDicomContainerDir/$sdir ;  to3d -anat -prefix $prefix -session $session "i*" )
-else
-echo "*** $session/$prefix+orig.HEAD already exists. Skipping creation of anatomy"
-fi
+	    prefix="$subject"
+	    if [ ! -f $session/$prefix+orig.HEAD ] ; then
+		echo "*** Now creating AFNI HEAD/BRIK for T1 anatomy of $subject"
+		echo "*** Prefix will be $prefix"
+		( cd $subjectDicomContainerDir/$sdir ;  to3d -anat -prefix $prefix -session $session "i*" )
+	    else
+		echo "*** $session/$prefix+orig.HEAD already exists. Skipping creation of anatomy"
+	    fi
 
-else
-echo "*** The s-directory $sdir does not exist or you entered a empty string for it when prompted. Cannot reconstruct anatomy for subject ${subject}. Skipping."
-fi
-else
-echo "*** Cannot find $subjectDicomContainerDir"
-echo "*** Skipping"
-fi
+	else
+	    echo "*** The s-directory $sdir does not exist or you entered a empty string for it when prompted. Cannot reconstruct anatomy for subject ${subject}. Skipping."
+	fi
+    else
+	echo "*** Cannot find $subjectDicomContainerDir"
+	echo "*** Skipping"
+    fi
 
 }
 
 
 function prepareForFunctionalReconstruction {
-subject=$1
-subjectDicomContainerDir=$dataRoot/$subject
-if [ -d $subjectDicomContainerDir ] ; then
+    subject=$1
+    subjectDicomContainerDir=$dataRoot/$subject
+    if [ -d $subjectDicomContainerDir ] ; then
 
-( cd $subjectDicomContainerDir; mv e*/* ./ )
-( cd $subjectDicomContainerDir; $scriptsDir/scheck )
+	( cd $subjectDicomContainerDir; mv e*/* ./ )
+	( cd $subjectDicomContainerDir; $scriptsDir/scheck )
 
-else
-echo "*** Cannot find $subjectDicomContainerDir"
-echo "*** Skipping"
-fi
+    else
+	echo "*** Cannot find $subjectDicomContainerDir"
+	echo "*** Skipping"
+    fi
 }
 
 function reconstructFunctional {
-subject=$1
+    subject=$1
 
-dicomTask="estop"
+    dicomTask="estop"
 
-slices="40"
-volumes="290"
-tr="2000"
+    slices="40"
+    volumes="290"
+    tr="2000"
 
-subjectDicomContainerDir=$dataRoot/$subject
-if [ -d $subjectDicomContainerDir ] ; then
-if [ -f $subjectDicomContainerDir/sinfo.txt ] ; then
+    subjectDicomContainerDir=$dataRoot/$subject
+    if [ -d $subjectDicomContainerDir ] ; then
+	if [ -f $subjectDicomContainerDir/sinfo.txt ] ; then
 
-## not that the tail -1 in the next line implements that assumption
-## that in the case of their being multiple runs of the same task that
-## the final one is the correct one to use
-sdir=$( cat $subjectDicomContainerDir/sinfo.txt | grep -i "$dicomTask" | tail -1 | awk '{print $1}' )
-else
-(cd $subjectDicomContainerDir; ../scheck )
-#echo "*** Could not find $subjectDicomContainerDir/sinfo.txt from which to determine the correct s-directory containing the DICOMS for the $task task"
-#echo "*** Please provide the s-directory name (enter Ctrl-C to quit at this point if you do not know the correct s-directory)"
-#read sdir
-##echo "** There are ${#sdir} characters in the entered text"
-##exit
-fi
-if [ ${#sdir} -gt 0 ] && [ -d  $subjectDicomContainerDir/$sdir ] ; then
-echo "*** Resequencing the i files in $subjectDicomContainerDir/$sdir"
-( cd $subjectDicomContainerDir/; $scriptsDir/imseq $sdir )
+	    ## not that the tail -1 in the next line implements that assumption
+	    ## that in the case of their being multiple runs of the same task that
+	    ## the final one is the correct one to use
+	    sdir=$( cat $subjectDicomContainerDir/sinfo.txt | grep -i "$dicomTask" | tail -1 | awk '{print $1}' )
+	else
+	    (cd $subjectDicomContainerDir; ../scheck )
+	    #echo "*** Could not find $subjectDicomContainerDir/sinfo.txt from which to determine the correct s-directory containing the DICOMS for the $task task"
+	    #echo "*** Please provide the s-directory name (enter Ctrl-C to quit at this point if you do not know the correct s-directory)"
+	    #read sdir
+	    ##echo "** There are ${#sdir} characters in the entered text"
+	    ##exit
+	fi
+	if [ ${#sdir} -gt 0 ] && [ -d  $subjectDicomContainerDir/$sdir ] ; then
+	    echo "*** Resequencing the i files in $subjectDicomContainerDir/$sdir"
+	    ( cd $subjectDicomContainerDir/; $scriptsDir/imseq $sdir )
 
-session=$dataRoot/${subject}BRIKS
-if [ ! -d $session ] ; then
-echo "*** $session does not exist. Creating it now"
-mkdir -p $session
-fi
+	    session=$dataRoot/${subject}BRIKS
+	    if [ ! -d $session ] ; then
+		echo "*** $session does not exist. Creating it now"
+		mkdir -p $session
+	    fi
 
-##prefix="$subject.$task"
-prefix="$subject$task"
-echo "*** Now creating AFNI HEAD/BRIK of the ${dicomTask} task for $subject"
-echo "*** Prefix will be $prefix"
-( cd $subjectDicomContainerDir/$sdir ;  to3d -epan -prefix $prefix$nifti -session $session -time:zt $slices $volumes $tr alt+z "i*" )
+	    ##prefix="$subject.$task"
+	    prefix="$subject$task"
+	    echo "*** Now creating AFNI HEAD/BRIK of the ${dicomTask} task for $subject"
+	    echo "*** Prefix will be $prefix"
+	    ( cd $subjectDicomContainerDir/$sdir ;  to3d -epan -prefix $prefix$nifti -session $session -time:zt $slices $volumes $tr alt+z "i*" )
 
-else
-echo "*** The s-directory $sdir does not exist or you entered a empty string for it when prompted. Cannot reconstruct $task task data for subject ${subject}. Skipping."
-fi
-else
-echo "*** Cannot find $subjectDicomContainerDir"
-echo "*** Skipping"
-fi
+	else
+	    echo "*** The s-directory $sdir does not exist or you entered a empty string for it when prompted. Cannot reconstruct $task task data for subject ${subject}. Skipping."
+	fi
+    else
+	echo "*** Cannot find $subjectDicomContainerDir"
+	echo "*** Skipping"
+    fi
 }
 
 function linkAnatomy {
-subject=$1
-echo "*** Linking anatomy for $subject"
+    subject=$1
+    echo "*** Linking anatomy for $subject"
 
-if [ -f $dataRoot/${subject}BRIKS/${subject}+orig.HEAD ] ; then
-if [ ! -f $dataRoot/${taskDir}/data/${subject}/${subject}+orig.HEAD ] ; then
-ln -sf $dataRoot/${subject}BRIKS/${subject}+orig.HEAD $dataRoot/${taskDir}/data/${subject}/
-fi
-fi
+    if [ -f $dataRoot/${subject}BRIKS/${subject}+orig.HEAD ] ; then
+	if [ ! -f $dataRoot/${taskDir}/data/${subject}/${subject}+orig.HEAD ] ; then
+	    ln -sf $dataRoot/${subject}BRIKS/${subject}+orig.HEAD $dataRoot/${taskDir}/data/${subject}/
+	fi
+    fi
 
-if [ -f $dataRoot/${subject}BRIKS/${subject}+orig.BRIK ] ; then
-if [ ! -f $dataRoot/${taskDir}/data/${subject}/${subject}+orig.BRIK ] ; then
-ln -sf $dataRoot/${subject}BRIKS/${subject}+orig.BRIK $dataRoot/${taskDir}/data/${subject}/
-fi
-else
-if [ -f $dataRoot/${subject}BRIKS/${subject}+orig.BRIK.gz ] ; then
-## assume that the gzipped version exists
-if [ ! -f $dataRoot/${taskDir}/data/${subject}/${subject}+orig.BRIK.gz ] ; then
-ln -sf $dataRoot/${subject}BRIKS/${subject}+orig.BRIK.gz $dataRoot/${taskDir}/data/${subject}/
-fi
-fi
-fi
+    if [ -f $dataRoot/${subject}BRIKS/${subject}+orig.BRIK ] ; then
+	if [ ! -f $dataRoot/${taskDir}/data/${subject}/${subject}+orig.BRIK ] ; then
+	    ln -sf $dataRoot/${subject}BRIKS/${subject}+orig.BRIK $dataRoot/${taskDir}/data/${subject}/
+	fi
+    else
+	if [ -f $dataRoot/${subject}BRIKS/${subject}+orig.BRIK.gz ] ; then
+	    ## assume that the gzipped version exists
+	    if [ ! -f $dataRoot/${taskDir}/data/${subject}/${subject}+orig.BRIK.gz ] ; then
+		ln -sf $dataRoot/${subject}BRIKS/${subject}+orig.BRIK.gz $dataRoot/${taskDir}/data/${subject}/
+	    fi
+	fi
+    fi
 
-symlinks -c $dataRoot/${taskDir}/data/${subject}/
+    symlinks -c $dataRoot/${taskDir}/data/${subject}/
 }
 
 function linkFunctional {
-subject=$1
-## name of task in source of link
-src=$2
-## name of task in destination link
-dest=$3
+    subject=$1
+    ## name of task in source of link
+    src=$2
+    ## name of task in destination link
+    dest=$3
 
-echo "*** Linking functional for $subject"
+    echo "*** Linking functional for $subject"
 
-if [ -f  $dataRoot/${subject}BRIKS/${subject}${src}+orig.HEAD ] ; then
-if [ ! -f $dataRoot/${taskDir}/data/${subject}/${subject}${dest}+orig.HEAD ] ; then
-ln -sf $dataRoot/${subject}BRIKS/${subject}${src}+orig.HEAD $dataRoot/${taskDir}/data/${subject}/${subject}${dest}+orig.HEAD
-fi
-fi
+    if [ -f  $dataRoot/${subject}BRIKS/${subject}${src}+orig.HEAD ] ; then
+	if [ ! -f $dataRoot/${taskDir}/data/${subject}/${subject}${dest}+orig.HEAD ] ; then
+	    ln -sf $dataRoot/${subject}BRIKS/${subject}${src}+orig.HEAD $dataRoot/${taskDir}/data/${subject}/${subject}${dest}+orig.HEAD
+	fi
+    fi
 
-if [ -f $dataRoot/${subject}BRIKS/${subject}${src}+orig.BRIK ] ; then
-if [ ! -f $dataRoot/${taskDir}/data/${subject}/${subject}${dest}+orig.BRIK ] ; then
-ln -sf $dataRoot/${subject}BRIKS/${subject}${src}+orig.BRIK $dataRoot/${taskDir}/data/${subject}/${subject}${dest}+orig.BRIK
-fi
-else
-if [ -f $dataRoot/${subject}BRIKS/${subject}${src}+orig.BRIK.gz ] ; then
-## assume that the gzipped version exists
-if [ ! -f $dataRoot/${taskDir}/data/${subject}/${subject}${dest}+orig.BRIK.gz ] ; then
-ln -sf $dataRoot/${subject}BRIKS/${subject}${src}+orig.BRIK.gz $dataRoot/${taskDir}/data/${subject}/${subject}${dest}+orig.BRIK.gz
-fi
-fi
-fi
+    if [ -f $dataRoot/${subject}BRIKS/${subject}${src}+orig.BRIK ] ; then
+	if [ ! -f $dataRoot/${taskDir}/data/${subject}/${subject}${dest}+orig.BRIK ] ; then
+	    ln -sf $dataRoot/${subject}BRIKS/${subject}${src}+orig.BRIK $dataRoot/${taskDir}/data/${subject}/${subject}${dest}+orig.BRIK
+	fi
+    else
+	if [ -f $dataRoot/${subject}BRIKS/${subject}${src}+orig.BRIK.gz ] ; then
+	    ## assume that the gzipped version exists
+	    if [ ! -f $dataRoot/${taskDir}/data/${subject}/${subject}${dest}+orig.BRIK.gz ] ; then
+		ln -sf $dataRoot/${subject}BRIKS/${subject}${src}+orig.BRIK.gz $dataRoot/${taskDir}/data/${subject}/${subject}${dest}+orig.BRIK.gz
+	    fi
+	fi
+    fi
 
-symlinks -c $dataRoot/${taskDir}/data/${subject}/
+    symlinks -c $dataRoot/${taskDir}/data/${subject}/
 }
 
 
@@ -197,59 +197,59 @@ existingDataDirs=""
 
 for subjectNumber in $subjects ; do
 
-## to setup for time point A change C and D to A as appripriate (and vice versa)
-##    for timepoint in A C ; do
-##	subjectNumber="${subjectNumber%_*}_${timepoint}"
+    ## to setup for time point A change C and D to A as appripriate (and vice versa)
+    ##    for timepoint in A C ; do
+    ##	subjectNumber="${subjectNumber%_*}_${timepoint}"
 
-timepoint=${subjectNumber##*_}
+    timepoint=${subjectNumber##*_}
 
-echo "####################################################################################################"
-echo "### Timepoint $timepoint: $subjectNumber"
+    echo "####################################################################################################"
+    echo "### Timepoint $timepoint: $subjectNumber"
 
-if [ -f $dataRoot/${subjectNumber}.tar.gz ] && [ ! -d $dataRoot/$subjectNumber ] ; then
-echo "*** Extracting data from tarball. This may take a while"
-( cd $dataRoot; tar xzf $subjectNumber.tar.gz )
-fi
+    if [ -f $dataRoot/${subjectNumber}.tar.gz ] && [ ! -d $dataRoot/$subjectNumber ] ; then
+	echo "*** Extracting data from tarball. This may take a while"
+	( cd $dataRoot; tar xzf $subjectNumber.tar.gz )
+    fi
 
-if [ -d $dataRoot/$subjectNumber ] ; then
-existingDataDirs="$existingDataDirs $subjectNumber"
-# if [ ! -d $dataRoot/${taskDir}/data/$subjectNumber ] ; then
-#     mkdir $dataRoot/${taskDir}/data/$subjectNumber
-# fi
+    if [ -d $dataRoot/$subjectNumber ] ; then
+	existingDataDirs="$existingDataDirs $subjectNumber"
+	# if [ ! -d $dataRoot/${taskDir}/data/$subjectNumber ] ; then
+	#     mkdir $dataRoot/${taskDir}/data/$subjectNumber
+	# fi
 
-# if [ ! -f $dataRoot/$subjectNumber/sinfo.txt ] ; then
-#     echo "*** Preparing for reconstruction of functional for $subjectNumber"
-#     prepareForFunctionalReconstruction  $subjectNumber
-# fi
+	# if [ ! -f $dataRoot/$subjectNumber/sinfo.txt ] ; then
+	#     echo "*** Preparing for reconstruction of functional for $subjectNumber"
+	#     prepareForFunctionalReconstruction  $subjectNumber
+	# fi
 
-# if [ -f $dataRoot/$subjectNumber+orig.HEAD ] ; then
-#     linkAnatomy $subjectNumber
-# else
-#     echo "*** Trying to reconstruct anatomy for $subjectNumber"
-#     reconstructAnatomy $subjectNumber
-#     linkAnatomy $subjectNumber
-# fi
-else
-noDataDir="$noDataDir $subjectNumber"
-echo "*** $dataRoot/$subjectNumber does not exist. Skipping"
-fi
+	# if [ -f $dataRoot/$subjectNumber+orig.HEAD ] ; then
+	#     linkAnatomy $subjectNumber
+	# else
+	#     echo "*** Trying to reconstruct anatomy for $subjectNumber"
+	#     reconstructAnatomy $subjectNumber
+	#     linkAnatomy $subjectNumber
+	# fi
+    else
+	noDataDir="$noDataDir $subjectNumber"
+	echo "*** $dataRoot/$subjectNumber does not exist. Skipping"
+    fi
 
-### Now deal with the functional
-## lc=lower case
-lc_task=$( echo ${task} | tr '[A-Z]' '[a-z]' )
-if [ -f $dataRoot/${subjectNumber}BRIKS/${subjectNumber}${task}+orig.HEAD ] ; then
-linkFunctional $subjectNumber ${task} ${task}
-elif [ -f $dataRoot/${subjectNumber}BRIKS/${subjectNumber}${lc_task}+orig.HEAD ] ; then
-linkFunctional $subjectNumber ${lc_task} $task
-else
-## no functional? try to do reconstruction
+    ### Now deal with the functional
+    ## lc=lower case
+    lc_task=$( echo ${task} | tr '[A-Z]' '[a-z]' )
+    if [ -f $dataRoot/${subjectNumber}BRIKS/${subjectNumber}${task}+orig.HEAD ] ; then
+	linkFunctional $subjectNumber ${task} ${task}
+    elif [ -f $dataRoot/${subjectNumber}BRIKS/${subjectNumber}${lc_task}+orig.HEAD ] ; then
+	linkFunctional $subjectNumber ${lc_task} $task
+    else
+	## no functional? try to do reconstruction
 
-echo "*** Trying to reconstruct functional for $subjectNumber"
-reconstructFunctional $subjectNumber
-linkFunctional $subjectNumber  ${task} ${task}
-fi
+	echo "*** Trying to reconstruct functional for $subjectNumber"
+	reconstructFunctional $subjectNumber
+	linkFunctional $subjectNumber  ${task} ${task}
+    fi
 
-##    done ## end of for timepoint in C D ; do
+    ##    done ## end of for timepoint in C D ; do
 done ## end of for subjectNumber in $subjects ; do
 
 

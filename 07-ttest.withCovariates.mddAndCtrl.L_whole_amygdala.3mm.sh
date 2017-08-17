@@ -1,4 +1,11 @@
-cd /data/sanDiego/rsfcGraphAnalysis/data//Group.results ; 3dttest++ -mask mask.grey.mddAndCtrl.union.masked+tlrc.HEAD \
+#!/bin.bash
+
+unset AFNI_COMPRESSOR 
+export OMP_NUM_THREADS=40
+mkdir -p /data/sanDiego/rsfcGraphAnalysis/data//Group.results.baseline.all.seeds/ttest.L_whole_amygdala.3mm 
+cd /data/sanDiego/rsfcGraphAnalysis/data//Group.results.baseline.all.seeds/ttest.L_whole_amygdala.3mm 
+3dttest++  \
+-mask ../mask.grey.mddAndCtrl.union.masked+tlrc.HEAD \
 -prefix ttest.mddAndCtrl.L_whole_amygdala.3mm.covaried \
 -center NONE \
 -setA MDD 106_A /data/sanDiego/rsfcGraphAnalysis//data/106_A/rsfc/L_whole_amygdala.3mm/L_whole_amygdala.3mm.z-score+tlrc.HEAD \
@@ -102,4 +109,4 @@ cd /data/sanDiego/rsfcGraphAnalysis/data//Group.results ; 3dttest++ -mask mask.g
 421_A /data/sanDiego/rsfcGraphAnalysis//data/421_A/rsfc/L_whole_amygdala.3mm/L_whole_amygdala.3mm.z-score+tlrc.HEAD \
 422_A /data/sanDiego/rsfcGraphAnalysis//data/422_A/rsfc/L_whole_amygdala.3mm/L_whole_amygdala.3mm.z-score+tlrc.HEAD \
 423_A /data/sanDiego/rsfcGraphAnalysis//data/423_A/rsfc/L_whole_amygdala.3mm/L_whole_amygdala.3mm.z-score+tlrc.HEAD \
--covariates /data/sanDiego/rsfcGraphAnalysis/data//Group.data/3dttest.covariates.mddAndCtrl.L_whole_amygdala.3mm.txt
+-covariates /data/sanDiego/rsfcGraphAnalysis/data//Group.data.baseline.all.seeds/3dttest.covariates.mddAndCtrl.L_whole_amygdala.3mm.txt

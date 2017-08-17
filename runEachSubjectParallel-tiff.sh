@@ -5,22 +5,23 @@
 trap exit SIGHUP SIGINT SIGTERM
 
 taskDir=rsfcGraphAnalysis
-task=funcon
-#task=ESTOP
+#task=funcon
+task=ESTOP
 
 RSFC_ROOT=/data/sanDiego
 
 if [[ $# -gt 0 ]] ; then
     subjects="$*"
 else
-#subjects="$( cat /data/sanDiego/rsfcGraphAnalysis/data/config/estop.realigned.subj.txt )"
-
-#subjects="$( cat /data/sanDiego/rsfcGraphAnalysis/data/config/estop.subjList.txt )"
-subjects="$( cat /data/sanDiego/rsfcGraphAnalysis/data/config/rs114a.subj.txt )"
-echo $subjects
-
+    #subjects="$( cat /data/sanDiego/rsfcGraphAnalysis/data/config/estop.realigned.subj.txt )"
+    
+    #subjects="$( cat /data/sanDiego/rsfcGraphAnalysis/data/config/estop.subjList.txt )"
+    ## subjects="$( cat /data/sanDiego/rsfcGraphAnalysis/data/config/rs114a.subj.txt )"
+    subjects="$( cat ../data/config/flex.rsfc.mddAndCtrl.csv )"
+    echo $subjects
+    
     ## change task above too to match this list of subjects
-## subjects=$( cd $RSFC_ROOT/$taskDir/data; \ls -1d *_[ABC] )
+    ## subjects=$( cd $RSFC_ROOT/$taskDir/data; \ls -1d *_[ABC] )
     ## subjects="$( cat /data/sanDiego/cESTOP/data/config/clean.estop.subjList.txt /data/sanDiego/cESTOP/data/config/clean.estop.mddfollowup.txt  )"
 fi
 
@@ -79,16 +80,18 @@ export JOBS OMP_NUM_THREADS AFNI_COMPRESSOR AFNI_DECONFLICT
 
 cd $RSFC_ROOT/$taskDir/scripts
 
-##./01-preprocessAnatomy.sh    --subject=$subject
+## ./01-preprocessAnatomy.sh    --subject=$subject
 
-#./02-preprocessFunctional.sh --subject=$subject --drop=0 --fwhm=4.2 -c 0.3
+## ./02-preprocessFunctional.sh --subject=$subject --drop=0 --fwhm=4.2 -c 0.3
 
 ## ./04-extractRsfcTimeseriesFromAalMasks.sh  --subject=$subject -l ../standard/aal_for_SPM8/fcseedlist3mm.txt 
-##./04-extractRsfcTimeseriesFromAalMasks-tiff.sh --subject=$subject --seedlist /data/sanDiego/rsfcGraphAnalysis/standard/yeo7liberal/yeo_7liberal_split2.txt
+## ./04-extractRsfcTimeseriesFromAalMasks-tiff.sh --subject=$subject --seedlist /data/sanDiego/rsfcGraphAnalysis/standard/yeo7liberal/yeo_7liberal_split2.txt
 
- ./04-extractRsfcTimeseriesFromAalMasks-tiff.sh --subject=$subject --seedlist /data/sanDiego/rsfcGraphAnalysis/standard/yeo7liberal/yeo_7liberal_split.txt
+## ./04-extractRsfcTimeseriesFromAalMasks-tiff.sh --subject=$subject --seedlist /data/sanDiego/rsfcGraphAnalysis/standard/yeo7liberal/yeo_7liberal_split.txt
 
-#./04-extractEstopTimeseriesFromAalMasks-tiff.sh --subject=$subject --seedlist /data/sanDiego/rsfcGraphAnalysis/standard/yeo7liberal/yeo_rsn_7liberal.txt
+ ./04-extractEstopTimeseriesFromAalMasks-tiff.sh --subject=$subject  --seedlist /data/sanDiego/rsfcGraphAnalysis/standard/yeo7liberal/yeo_7liberal_split.txt
+
+# ./04-extractEstopTimeseriesFromAalMasks-tiff.sh --subject=$subject --seedlist /data/sanDiego/rsfcGraphAnalysis/standard/yeo7liberal/yeo_rsn_7liberal.txt
 
 EOF
 	chmod +x  run/run-yeo7split-$subject.sh

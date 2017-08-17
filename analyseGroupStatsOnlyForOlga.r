@@ -696,21 +696,37 @@ ctqFilename=file.path(admin.data.dir, "Exisiting CTQ Scored_with RC.csv")
 slesFilename=file.path(admin.data.dir, "SLES_20140820.csv")
 wasiFilename=file.path(admin.data.dir, "WASI.csv")
 
+## JAD graph DTI paper
+## subjectList=c("106_A", "107_A", "108_A", "109_A", "111_A", "112_A", "114_A",
+##               "116_A", "121_A", "122_A", "123_A", "124_A", "126_A", "130_A",
+##               "131_A", "132_A", "133_A", "134_A", "136_A", "137_A", "138_A",
+##               "141_A", "142_A", "143_A", "144_A", "145_A", "146_A", "147_A",
+##               "149_A", "150_A", "151_A", "152_A", "155_A", "157_A", "158_A",
+##               "160_A", "161_A", "162_A", "164_A", "165_A", "167_A", "301_A",
+##               "303_A", "304_A", "306_A", "310_A", "312_A", "313_A", "316_A",
+##               "317_A", "318_A", "320_A", "321_A", "322_A", "323_A", "324_A",
+##               "325_A", "326_A", "328_A", "331_A", "332_A", "333_A", "335_A",
+##               "336_A", "339_A", "342_A", "343_A", "344_A", "346_A", "347_A",
+##               "348_A", "349_A", "350_A", "351_A", "353_A", "354_A", "355_A",
+##               "356_A", "357_A", "358_A", "359_A", "360_A", "361_A", "363_A",
+##               "364_A", "365_A", "366_A", "367_A", "368_A", "370_A", "371_A",
+##               "372_A", "373_A", "377_A", "379_A", "380_A", "386_A", "387_A")
 
-subjectList=c("106_A", "107_A", "108_A", "109_A", "111_A", "112_A", "114_A",
-"116_A", "121_A", "122_A", "123_A", "124_A", "126_A", "130_A",
-"131_A", "132_A", "133_A", "134_A", "136_A", "137_A", "138_A",
-"141_A", "142_A", "143_A", "144_A", "145_A", "146_A", "147_A",
-"149_A", "150_A", "151_A", "152_A", "155_A", "157_A", "158_A",
-"160_A", "161_A", "162_A", "164_A", "165_A", "167_A", "301_A",
-"303_A", "304_A", "306_A", "310_A", "312_A", "313_A", "316_A",
-"317_A", "318_A", "320_A", "321_A", "322_A", "323_A", "324_A",
-"325_A", "326_A", "328_A", "331_A", "332_A", "333_A", "335_A",
-"336_A", "339_A", "342_A", "343_A", "344_A", "346_A", "347_A",
-"348_A", "349_A", "350_A", "351_A", "353_A", "354_A", "355_A",
-"356_A", "357_A", "358_A", "359_A", "360_A", "361_A", "363_A",
-"364_A", "365_A", "366_A", "367_A", "368_A", "370_A", "371_A",
-"372_A", "373_A", "377_A", "379_A", "380_A", "386_A", "387_A")
+
+## mtDNA paper
+subjectList=c("106_A", "107_A", "109_A", "111_A", "112_A", "114_A", "116_A",
+              "121_A", "122_A", "123_A", "124_A", "126_A", "130_A", "131_A",
+              "132_A", "133_A", "134_A", "136_A", "137_A", "138_A", "141_A",
+              "142_A", "143_A", "144_A", "145_A", "146_A", "149_A", "150_A",
+              "151_A", "152_A", "155_A", "157_A", "158_A", "160_A", "161_A",
+              "162_A", "164_A", "165_A", "167_A", "301_A", "303_A", "304_A",
+              "306_A", "310_A", "312_A", "313_A", "316_A", "317_A", "324_A",
+              "325_A", "326_A", "328_A", "331_A", "332_A", "333_A", "335_A",
+              "336_A", "339_A", "342_A", "343_A", "344_A", "346_A", "347_A",
+              "351_A", "353_A", "354_A", "355_A", "356_A", "357_A", "358_A",
+              "359_A", "360_A", "361_A", "363_A", "364_A", "365_A", "366_A",
+              "367_A", "368_A", "372_A", "377_A", "379_A", "386_A", "387_A")
+
 
 ## Create the subjectOrder variable used throughout the rest of the script
 ## the clean subject list has no timepoint suffix
@@ -927,8 +943,11 @@ if (exists("results.stack") ) {
     analyse(mgd, group.variable="Grp", compute.effect.size=TRUE, results.table.filename=NULL)
     ## analyse(mgd, group.variable="Grp", compute.effect.size=TRUE, results.table.filename=results.table.filename)
 }
+## JAD DTI paper
+## write.csv(mgd, file=file.path(group.results.dir, "mgd.dataframe.for.olga.csv"), col.names=TRUE, row.names=FALSE, quote=FALSE, append=FALSE)
 
-write.csv(mgd, file=file.path(group.results.dir, "mgd.dataframe.for.olga.csv"), col.names=TRUE, row.names=FALSE, quote=FALSE, append=FALSE)
+## mtDNA paper
+write.csv(mgd, file=file.path(group.results.dir, "mgd.mtDNA.dataframe.for.olga.csv"), col.names=TRUE, row.names=FALSE, quote=FALSE, append=FALSE)
 
 
 ## WASI.Full.4 outliers

@@ -1,6 +1,8 @@
 rm(list=ls())
 ##graphics.off()
 
+library(plyr)
+
 readCsvFile <- function (inFilename, inSubjectColumnName="ID") {
 
     cat("*** Reading", inFilename, "\n")
@@ -44,7 +46,7 @@ if ( any(cdrsr.scores$ID=="300") ) {
     cdrsr.scores$ID=as.factor(cdrsr.scores$ID)
 }
 cdrsr.scores$ID=as.factor(cdrsr.scores$ID)
-cdrsr.scores=rename(cdrsr.scores, c("Grp"="Group"))
+cdrsr.scores=rename(cdrsr.scores, c(Grp="Group"))
 
 ss.cdrsr.scores=subset(cdrsr.scores, Group=="MDD" & timepoint=="C")
 

@@ -6,7 +6,7 @@ use File::Find;
 use File::Basename;
 use Getopt::Long;
 
-##use File::Grep qw ( fgrep );
+##Use File::Grep qw ( fgrep );
 
 sub annotateAnova;
 sub trimWhiteSpaces($);
@@ -91,11 +91,17 @@ foreach my $groupDir ( @groupDirs ) {
       ##print"h is $h\n";
       if ( $h ) {
 	#print "INFO: Found clusters in $clusterFile\n";
-	if ( $force ) {
+	if ( -f $clusterLocations  && $force ) {
 	  unlink $clusterLocations;
 	}
+	## if clusterLocations exists and is older then the
+	## clusterFile then delete the clusterLocaitons file
+	if  ( -f  $clusterLocations && ((stat($clusterLocations))[9] < (stat($clusterFile))[9] ) ) {
+	    unlink $clusterLocations;
+	}
+
 	if ( ! -f $clusterLocations ) {
-	  open(OUT,">$clusterLocations") || die "Cannot write to file $clusterLocations: $!";
+	    open(OUT,">$clusterLocations") || die "Cannot write to file $clusterLocations: $!";
 	  
 	  my @TailarachLocations = annotateAnova($clusterFile);
 	  {

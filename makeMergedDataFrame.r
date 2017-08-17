@@ -314,6 +314,6 @@ mgd=mgd[order(mgd$ID, mgd$timepoint), ]
 ## save the mgd file
 date.tag=format(Sys.Date(), "%Y.%m.%d")
 merged.file.name=file.path(admin.data.dir, sprintf("merged.demographics.and.neuropsych.%s.csv", date.tag))
-cat("*** Wrinting merged demographics and neuropsychiactric measures to", merged.file.name, "\n")
+cat("*** Writing merged demographics and neuropsychiatric measures to", merged.file.name, "\n")
 cat("*** WARNING: the MASC t-scores for the timepoints other than A will not be accurate since the MRI data refers to only timepoint A\n")
 write.csv(mgd, merged.file.name, row.names=FALSE, col.names=TRUE, quote=TRUE)

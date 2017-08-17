@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#set -x 
+set -x 
 
 # if ctrl-c is typed exit immediatly
 trap exit SIGHUP SIGINT SIGTERM
@@ -54,13 +54,13 @@ fi
 echo "*** Extracting ESTOP timeseries from the following seeds:"
 echo $seeds
 
-[[ ! -d $DATA/$subjectNumber/estop/yeo7lib ]] && mkdir -p $DATA/$subjectNumber/estop/yeo7lib
-cd $DATA/$subjectNumber/estop/yeo7lib
+[[ ! -d $DATA/$subjectNumber/estopNoBP/yeo7lib ]] && mkdir -p $DATA/$subjectNumber/estopNoBP/yeo7lib
+cd $DATA/$subjectNumber/estopNoBP/yeo7lib
 
-preprocessedEstopDir=$DATA/$subjectNumber/estopPreprocessed
-cd $DATA/$subjectNumber/estopPreprocessed
-chmod +wx ${subjectNumber}.pm.cleanEPI.MNI.nii.gz
-cd $DATA/$subjectNumber/estop/yeo7lib
+preprocessedEstopDir=$DATA/$subjectNumber/estopPreprocessedNoBP
+# cd $DATA/$subjectNumber/estopPreprocessedNoBP
+# ## chmod +w ${subjectNumber}.pm.cleanEPI.MNI.nii.gz
+# cd $DATA/$subjectNumber/estopNoBP/yeo7lib
 
 for seed in $seeds ; do
 

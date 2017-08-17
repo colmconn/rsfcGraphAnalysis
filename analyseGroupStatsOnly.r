@@ -419,13 +419,13 @@ analyse <- function(inData, group.variable="Grp", compute.effect.size=TRUE, resu
             group2.string=""
             test=0
             if (isNonparametricTestVariable(variable)) {
-                group1.string=makeTableString(sm.df[1, 1], inMean=sm.df[1, "median"],  sm.df[1, "IQR"], sm.df[1, "min"], sm.df[1, "max"], sm.df[1, "nacount"], inMissingData=TRUE, in.range=FALSE)
-                group2.string=makeTableString(sm.df[2, 1], inMean=sm.df[2, "median"],  sm.df[2, "IQR"], sm.df[2, "min"], sm.df[2, "max"], sm.df[2, "nacount"], inMissingData=TRUE, in.range=FALSE)
+                group1.string=makeTableString(sm.df[1, 1], inMean=sm.df[1, "median"],  sm.df[1, "IQR"], sm.df[1, "min"], sm.df[1, "max"], sm.df[1, "nacount"], inMissingData=TRUE, in.range=in.range)
+                group2.string=makeTableString(sm.df[2, 1], inMean=sm.df[2, "median"],  sm.df[2, "IQR"], sm.df[2, "min"], sm.df[2, "max"], sm.df[2, "nacount"], inMissingData=TRUE, in.range=in.range)
                 
                 ##name=paste(name, "†", sep="")
             } else {
-                group1.string=makeTableString(sm.df[1, 1], sm.df[1, variable],  sm.df[1, "sd"], sm.df[1, "min"], sm.df[1, "max"], sm.df[1, "nacount"], inMissingData=TRUE, in.range=FALSE)
-                group2.string=makeTableString(sm.df[2, 1], sm.df[2, variable],  sm.df[2, "sd"], sm.df[2, "min"], sm.df[2, "max"], sm.df[2, "nacount"], inMissingData=TRUE, in.range=FALSE)
+                group1.string=makeTableString(sm.df[1, 1], sm.df[1, variable],  sm.df[1, "sd"], sm.df[1, "min"], sm.df[1, "max"], sm.df[1, "nacount"], inMissingData=TRUE, in.range=in.range)
+                group2.string=makeTableString(sm.df[2, 1], sm.df[2, variable],  sm.df[2, "sd"], sm.df[2, "min"], sm.df[2, "max"], sm.df[2, "nacount"], inMissingData=TRUE, in.range=in.range)
             }
 
             if (any(is.na(inData[, variable]))) {
@@ -1293,11 +1293,11 @@ psychMeasures=list(
     ## list(variable="RADS.NS",      name="Reynolds Adolescent Depression Scale Negative Self-evaluation"),
     ## list(variable="RADS.SC",      name="Reynolds Adolescent Depression Scale Somatic Complaints"),    
     
-    ## list(variable="RADS.DM.Tscore",      name="Reynolds Adolescent Depression Scale Dysphoric Mood (Standardized)"),
-    ## list(variable="RADS.AN.Tscore",      name="Reynolds Adolescent Depression Scale Anhedonia/Negative Affect (Standardized)"),
-    ## list(variable="RADS.NS.Tscore",      name="Reynolds Adolescent Depression Scale Negative Self-evaluation (Standardized)"),
-    ## list(variable="RADS.SC.Tscore",      name="Reynolds Adolescent Depression Scale Somatic Complaints (Standardized)"),
-     list(variable="RADS.Total.Tscore",      name="Reynolds Adolescent Depression Scale Total (Standardized)"),
+    list(variable="RADS.DM.Tscore",      name="Reynolds Adolescent Depression Scale Dysphoric Mood (Standardized)"),
+    list(variable="RADS.AN.Tscore",      name="Reynolds Adolescent Depression Scale Anhedonia/Negative Affect (Standardized)"),
+    list(variable="RADS.NS.Tscore",      name="Reynolds Adolescent Depression Scale Negative Self-evaluation (Standardized)"),
+    list(variable="RADS.SC.Tscore",      name="Reynolds Adolescent Depression Scale Somatic Complaints (Standardized)"),
+    list(variable="RADS.Total.Tscore",      name="Reynolds Adolescent Depression Scale Total (Standardized)"),
     
     
     ## list(variable="SFMQ.total",     name="SFMQ"),
@@ -1391,10 +1391,10 @@ mgd[mgd$subject=="378", "Gender"]="F"
 mgd$Gender=droplevels(mgd$Gender)
 
 if (exists("results.stack") ) {
-    analyse(mgd, group.variable="Grp", compute.effect.size=TRUE, results.table.filename=NULL, in.range=FALSE, results.stack=results.stack)
+    analyse(mgd, group.variable="Grp", compute.effect.size=TRUE, results.table.filename=NULL, in.range=TRUE, results.stack=results.stack)
     ## analyse(mgd, group.variable="Grp", compute.effect.size=TRUE, results.table.filename=results.table.filename, results.stack=results.stack)
 } else {
-    analyse(mgd, group.variable="Grp", compute.effect.size=FALSE, results.table.filename=NULL)
+    analyse(mgd, group.variable="Grp", compute.effect.size=FALSE, results.table.filename=NULL, in.range=TRUE)
     #analyse(mgd, group.variable="Grp", compute.effect.size=TRUE, results.table.filename=results.table.filename)
 }
 

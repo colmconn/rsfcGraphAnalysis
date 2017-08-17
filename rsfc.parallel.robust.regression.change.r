@@ -3,9 +3,9 @@
 rm(list=ls())
 
 ##the name of this script
-script.name=parent.frame(2)$ofile
+##script.name=parent.frame(2)$ofile
 ## the location (absolute path) to this script
-script.location=normalizePath(dirname(parent.frame(2)$ofile))
+##script.location=normalizePath(dirname(parent.frame(2)$ofile))
 
 library(MASS)
 library(getopt)
@@ -367,7 +367,7 @@ if ( Sys.info()["sysname"] == "Darwin" ) {
     cat(paste("*** Found" , ncpus, ifelse(ncpus == 1, "cpu", "cpus"), "\n"))
 } else if ( Sys.info()["sysname"] == "Linux" ) {
     root.dir="/data"
-    ncpus=16
+    ncpus=10
     cat(paste("*** Found" , ncpus, ifelse(ncpus == 1, "cpu", "cpus"), "\n"))    
 } else {
     stop(paste("Sorry can't set data directories for this computer\n"))
@@ -456,6 +456,8 @@ printOptionsSummary()
 
 change=readCsvFile(change.score.filename, "ID")
 groups="mddOnly"
+demographicsFilename=file.path(admin.data.dir, "0-data_entry_current_2014.csv")
+demographics=readCsvFile(demographicsFilename)
 
 seeds=readSeedsFile(seeds.filename)
 
@@ -494,6 +496,8 @@ if ( ! dir.exists( group.results.dir) ) {
     stop(sprintf("*** The group results directory (%s) does not exist. Cannot continue\n", group.results.dir))
 }
 
+include.gender.in.formula=TRUE
+
 for (seed in seeds) {
     seedName=getSeedName(seed)
     
@@ -503,9 +507,15 @@ for (seed in seeds) {
     ## setup all the filenames
     inputBucketFilename=paste("restingstate.bucket",                  groups, seedName,             "masked+tlrc.HEAD",  sep=".")
     if (opt$bootstrap) {
-        outputBucketPrefix= paste("restingstate.reversed.formula",    groups, seedName, rvVariable, "booted.rlm.bucket", sep=".")
+        if (include.gender.in.formula)
+            outputBucketPrefix= paste("restingstate.reversed.formula",    groups, seedName, rvVariable, "gender", "booted.rlm.bucket", sep=".")
+        else
+            outputBucketPrefix= paste("restingstate.reversed.formula",    groups, seedName, rvVariable,           "booted.rlm.bucket", sep=".")
     } else {
-        outputBucketPrefix= paste("restingstate.reversed.formula",    groups, seedName, rvVariable, "rlm.bucket",        sep=".")
+        if (include.gender.in.formula)
+            outputBucketPrefix= paste("restingstate.reversed.formula",    groups, seedName, rvVariable, "gender", "rlm.bucket",        sep=".")
+        else
+            outputBucketPrefix= paste("restingstate.reversed.formula",    groups, seedName, rvVariable,           "rlm.bucket",        sep=".")            
     }
 
     clusterLogFilename=paste("restingstate.cluster", groups, seedName, "log", sep=".")
@@ -527,9 +537,10 @@ for (seed in seeds) {
     
     ## this stored the total number of subbriks for all subjects for all types (i.e. wins, losses, and ties)
     numberOfBriks=inputBrik$dim[4]
-    
-    mgd=merge(subjectOrder, change, by.x="subject", by.y="ID", sort=FALSE)
 
+    mgd=merge(subjectOrder, change, by.x="subject", by.y="ID", sort=FALSE)
+    mgd$Gender=demographics[ match(mgd$subject, demographics$ID), "Gender"]
+    
     if (! all ( mgd$subject == subjectOrder$subject) ) {
         print(mgd$subject)
         print(subjectOrder$subject)
@@ -547,10 +558,15 @@ for (seed in seeds) {
         q(status=1)
     }
 
+    ## now add Gender to teh mgd data frame
+    
     mgd$subject=as.factor(mgd$subject)
     mgd=droplevels(mgd)
+    if ("T" %in% levels(mgd$Gender)) {
+        stop("*** Found T in Gender column. Fix this!")
+    }
     cat("mgd:\n")
-    print(head(mgd))
+    print(mgd)
     
     mrData = inputBrik$brk
     dim(mrData) = c(dimX, dimY, dimZ, numberOfBriks)
@@ -577,7 +593,17 @@ for (seed in seeds) {
             as.vector(mgd[, "subject"]),            
             as.vector(mgd[, c("age.in.years", paste(formula.variable, c("A", "C"), sep="."))]))
         colnames(model) = c("Grp", "subject", "age.in.years", paste(formula.variable, c("A", "C"), sep="."))
-    } else {
+    } else if (include.gender.in.formula) {
+        formula.variable=rvVariable
+        model = data.frame(
+            as.vector(mgd[, "Grp"]),
+            as.vector(mgd[, "subject"]),
+            as.vector(mgd[, "Gender"]),            
+            as.vector(mgd[, rvVariable]),
+            as.vector(mgd[, "age.in.years"]))
+        ## colnames(model) = c("Grp", "subject", paste(formula.variable, c("A.scaled", "C.scaled"), sep="."), "age.in.years")
+        colnames(model) = c("Grp", "subject", "Gender", formula.variable, "age.in.years")
+    }else {
         formula.variable=rvVariable
         model = data.frame(
             as.vector(mgd[, "Grp"]),
@@ -602,13 +628,15 @@ for (seed in seeds) {
     } else if (grepl("both", rvVariable, fixed=TRUE)) {
         modelFormula  = as.formula(
             paste(paste(formula.variable, "C", sep="."), "~ mri + ", paste(formula.variable, "A", sep="."), "+ age.in.years", sep=" "))
-    } else {
+    } else if (include.gender.in.formula) {
+        modelFormula  = as.formula(paste(formula.variable, "~", "mri + Gender + age.in.years", sep=" "))
+    }else {
         modelFormula  = as.formula(paste(formula.variable, "~", "mri + age.in.years", sep=" "))
     }
 
     cat("*** The model formula is: ")
     print(modelFormula)
-    
+    ## stop()
     ## if we got this far we should be able to run a single voxel to work
     ## out the DOF for the various stats, generate labels and indices for
     ## use with the unlisted rlm in the runRlm function
@@ -673,7 +701,7 @@ for (seed in seeds) {
     if (ncpus > 1 ) {
         ## multiple cpus
         library(snow)
-        
+        seed.value=123456789
         ## cluster = makeCluster(ncpus, type = "SOCK")
         cat("*** Starting cluster... ")
         cluster = makeCluster(rep("localhost", ncpus), type = "SOCK", outfile=file.path(group.results.dir, clusterLogFilename))

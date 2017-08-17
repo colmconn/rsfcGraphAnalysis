@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#set -x 
+## set -x 
 
 # if ctrl-c is typed exit immediatly
 trap exit SIGHUP SIGINT SIGTERM
@@ -67,9 +67,9 @@ for seed in $seeds ; do
     else 
 	seedName=${seedName%%+*}
     fi
-
+    ## echo $seedName
     mkdir ${seedName}
-
+    ## exit
     echo "*** Extracting timeseries for seed ${seed}"
     3dROIstats -quiet -mask_f2short -mask ${seed} ${preprocessedRsfcDir}/${subjectNumber}.pm.cleanEPI.MNI.nii.gz > ${seedName}/${seedName}.ts.1D
 

@@ -13,10 +13,12 @@ else
     # subjects="$( cat ../data/config/control.subjectList.txt ../data/config/mdd.subjectList.txt )"
     
     #   subjects="$( cat ../data/config/mddfollowup.txt )"
-    subjects=$( cd $DATA ;  ls -d *_[ABC] )
-    
+    # subjects=$( cd $DATA ;  ls -d *_[ABC] )
+    #subjects="106_D 149_D 161_D 300_D 304_D 314_D 317_D 321_D 323_D 330_D 333_D 339_D 345_D 137_D 158_D 167_D 301_D 313_D 316_D 320_D 322_D 329_D 331_D 335_D 342_D 349_D"
     ##subjects="118_C 120_C 149_C 150_C 301_C 311_A 315_C 364_A 364_C"
     ## subjects="324_B"
+
+    subjects="386_D 387_D 388_D 389_D 392_D 393_D 394_D 394_D2 397_D 401_D 402_D 403_D 404_D 405_D 406_D 413_D 415_D 420_D 421_C 422_C 423_C 423_D 424_C 426_A"
     
     ##     subjects="$( cat /data/sanDiego/cESTOP/data/config/clean.estop.mddfollowup.txt /data/sanDiego/cESTOP/data/config/clean.estop.subjList.txt  )"
 #    subjects="$( cat /data/sanDiego/cESTOP/data/config/clean.estop.mddfollowup.txt  )"    

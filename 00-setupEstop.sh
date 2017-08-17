@@ -17,7 +17,14 @@ scriptsDir="/data/sanDiego"
 if [[ $# -gt 0 ]] ; then
     subjects="$*"
 else
-    subjects="$( cat ../data/config/control.subjectList.txt ../data/config/mdd.subjectList.txt )"
+##     subjects="$( cat ../data/config/control.subjectList.txt ../data/config/mdd.subjectList.txt )"
+
+    subjects="106_C 112_C 118_C 144_C 149_C 158_C 161_C 300_C 304_C
+    	      311_C 315_C 317_C 322_C 330_C 337_C 341_C 357_C 365_C
+    	      367_C 389_C 397_C 403_C 410_C 415_C 111_C 117_C 120_C
+    	      147_C 150_C 160_C 167_C 301_C 309_C 313_C 316_C 320_C
+    	      323_C 336_C 339_C 348_C 364_C 366_C 380_C 392_C 401_C
+    	      406_C 414_C 419_C"
 fi
 
 function reconstructAnatomy {
@@ -87,10 +94,10 @@ function prepareForFunctionalReconstruction {
 function reconstructFunctional {
     subject=$1
 
-    dicomTask="resting state"
-    
+    dicomTask="estop"
+
     slices="40"
-    volumes="256"
+    volumes="290"
     tr="2000"
     
     subjectDicomContainerDir=$dataRoot/$subject

@@ -172,8 +172,8 @@ save.usable.subjects <- function (in.usable.subjects.list, in.variable, in.timep
 
     }
     
-    ncl.list.filename=file.path(config.data.dir, paste("new.ncl.subjectList.with", in.variable, ".withMedicated.AandC.txt", sep="."))
-    mdd.list.filename=file.path(config.data.dir, paste("new.mdd.subjectList.with", in.variable, ".withMedicated.AandC.txt", sep="."))
+    ncl.list.filename=file.path(config.data.dir, paste("new.ncl.subjectList.with", in.variable, "AandC.txt", sep="."))
+    mdd.list.filename=file.path(config.data.dir, paste("new.mdd.subjectList.with", in.variable, "AandC.txt", sep="."))
 
     ## ncl.list=remove.timepoint.indicator(in.usable.subjects.list[in.usable.subjects.list$Grp=="NCL", "ID"])
     ## mdd.list=remove.timepoint.indicator(in.usable.subjects.list[in.usable.subjects.list$Grp=="MDD", "ID"])
@@ -194,10 +194,10 @@ save.usable.subjects <- function (in.usable.subjects.list, in.variable, in.timep
 
 save.usable.subjects.change.scores <- function (in.usable.subjects.list, in.variable, in.timepoint=NULL) {
 
-    ## ncl.list.filename=file.path(admin.data.dir, sprintf("new.ncl.%s.change.score.csv", in.variable))
-    ## mdd.list.filename=file.path(admin.data.dir, sprintf("new.mdd.%s.change.score.csv", in.variable))
-    ncl.list.filename=file.path(admin.data.dir, sprintf("new.ncl.%s.score.withMedicated.csv", in.variable))
-    mdd.list.filename=file.path(admin.data.dir, sprintf("new.mdd.%s.score.withMedicated.csv", in.variable))
+    ncl.list.filename=file.path(admin.data.dir, sprintf("new.ncl.%s.change.score.csv", in.variable))
+    mdd.list.filename=file.path(admin.data.dir, sprintf("new.mdd.%s.change.score.csv", in.variable))
+    ## ncl.list.filename=file.path(admin.data.dir, sprintf("new.ncl.%s.score.withMedicated.csv", in.variable))
+    ## mdd.list.filename=file.path(admin.data.dir, sprintf("new.mdd.%s.score.withMedicated.csv", in.variable))
 
     ncl.list=in.usable.subjects.list[in.usable.subjects.list$Grp=="NCL", c("ID", "Grp", "age.in.years", "age.in.years.scaled", colnames(in.usable.subjects.list)[grep(in.variable, colnames(in.usable.subjects.list), fixed=TRUE)])]
     mdd.list=in.usable.subjects.list[in.usable.subjects.list$Grp=="MDD", c("ID", "Grp", "age.in.years", "age.in.years.scaled", colnames(in.usable.subjects.list)[grep(in.variable, colnames(in.usable.subjects.list), fixed=TRUE)])]
@@ -685,7 +685,8 @@ mgd[mgd$ID==136, "CGAS"]=NA
 ## for (variable in c("CGAS") ) {    
 ## for (variable in c("CDRS.t.score") ) {
 ## for (variable in c("BDI.II.Total") ) {
-for (variable in c("MASC.tscore") ) {    
+## for (variable in c("MASC.tscore") ) {
+for (variable in c("RADS.AN.tscore") ) {        
     cat("########################################################################################################################################################################################################\n")
     cat("*** Computing usable subjects for", variable, "\n")
 
@@ -710,6 +711,9 @@ for (variable in c("MASC.tscore") ) {
     ## save.usable.subjects(sl, variable, in.timepoint="A")
 
     ## save.usable.subjects.change.scores(sl, paste(variable, "diff", sep="."))
+
+    ## Apr 27 2017 this line is used to save the list oc change scores
+    ## for use in regressions
     ## save.usable.subjects.change.scores(sl, variable)
     
     ## save.usable.subjects.residualized.scores(sl, paste(variable, "rstandard", sep="."))
@@ -732,7 +736,7 @@ for (variable in c("MASC.tscore") ) {
     ## print(usable.time.a)
 
     ## save.timepoint.a.subjects.scores(usable.time.a, paste(variable, "scaled", sep="."))
-    save.timepoint.a.subjects.scores(usable.time.a, variable)    
+    ## save.timepoint.a.subjects.scores(usable.time.a, variable)    
 
     
     ## change.score.analyse(subjects.lists, sl, variable)    

@@ -111,9 +111,9 @@ group.results.dir=normalizePath(file.path(root.dir, "sanDiego/rsfcGraphAnalysis/
 scriptsDir=normalizePath(file.path(root.dir, "sanDiego/rsfcGraphAnalysis/scripts"))
 ##vbm.data.dir=normalizePath(file.path(root.dir, "sanDiego/rsfcGraphAnalysis/data/vbm/struc"))
 
-## vbm.data.dir=normalizePath(file.path(root.dir, "sanDiego/rsfcGraphAnalysis/data/vbmFromFreesurfer/struc"))
+vbm.data.dir=normalizePath(file.path(root.dir, "sanDiego/rsfcGraphAnalysis/data/vbmFromFreesurfer.sobp2017/struc"))
 
-vbm.data.dir=normalizePath(file.path(root.dir, "sanDiego/rsfcGraphAnalysis/data/vbm.subject.list.from.matthew.n111/struc"))
+## vbm.data.dir=normalizePath(file.path(root.dir, "sanDiego/rsfcGraphAnalysis/data/vbm.subject.list.from.matthew.n111/struc"))
 
 demographicsFilename=file.path(admin.data.dir, "0-data_entry_current_2014.csv")
 cat("*** Reading", demographicsFilename, "\n")
@@ -167,7 +167,8 @@ if (exists("tiv")) {
         wasi        [match(subjects$subject, wasi$SubID), c("Verbal", "Performance", "Full")])
 }
 subjects <- rename(subjects, c("Grp"="group"))
-
+subjects=droplevels(subset(subjects, group %in% c("MDD", "NCL")))
+                
 subjects$NCL=ifelse(subjects$group=="NCL", 1, 0)
 subjects$MDD=ifelse(subjects$group=="MDD", 1, 0)
 
@@ -175,13 +176,22 @@ subjects$Gender.num=ifelse(subjects$Gender=="F", 1, 0)
 
 subjects=fixDates(subjects)
 subjects=computeAge(subjects)
+
+if ( ! grepl("^MDD|NCL", subjects$filename[1]) ) {
+    subjects$renamed.filename=paste(subjects$group, subjects$filename, sep=".")
+    subjects=subjects[ order(subjects$renamed.filename), ]
+} else {
+    subjects=subjects[ order(subjects$filename), ]
+}
+
 rownames(subjects)=NULL
 
 ## now demean the gender and age.in.years columns
 if (exists("tiv")) {
     subjects.demeaned=demean(subjects, c("age.in.years", "Gender.num", "CDRS.tscore", "Full", "tiv", "tbv"), verbose=TRUE)
 } else {
-    subjects.demeaned=demean(subjects, c("age.in.years", "Gender.num", "CDRS.tscore", "Full"), verbose=TRUE)
+    ## subjects.demeaned=demean(subjects, c("age.in.years", "Gender.num", "CDRS.tscore", "Full"), verbose=TRUE)
+    subjects.demeaned=demean(subjects, c("age.in.years", "CDRS.tscore", "Full"), verbose=TRUE)    
 }
 
 ##################################################
@@ -189,6 +199,34 @@ if (exists("tiv")) {
 ##################################################
 simple.two.group.mx=makeDesignMatrix(subjects, c("MDD", "NCL"))
 simple.two.group.mx.with.covariates=makeDesignMatrix(subjects.demeaned, c("MDD", "NCL"), c("age.in.years", "Gender.num", "Full"))
+
+## x.table.file.name=file.path(vbm.data.dir, "..", "two.groups.withDemeanedGenderAndAgeAndWasi.Full.tab")
+## cat("*** Writing", x.table.file.name, "\n")
+## write.table(format(simple.two.group.mx.with.covariates, digits=3), file=x.table.file.name, quote=FALSE, row.names=FALSE, col.names=FALSE, append=FALSE)
+
+## This approach would yield the factor effects approachs *IFF* a
+## global mean column was added to the matrix. As it stands the code
+## is incomplete. teh addition of a "mean"=rep(1, dim(subjects)[1])
+## would complete the matrix.
+## See
+## https://fsl.fmrib.ox.ac.uk/fsl/fslwiki/GLM#Experimental_Designs_-_Between_Subject_ANOVA_Models
+##
+## two.groups.with.covariates.anova.matrix=cbind("group"=ifelse(subjects$group=="MDD", -1, 1),
+##                                               "gender"=ifelse(subjects$Gender=="F", -1, 1),
+##                                               "group.by.gender"=ifelse(subjects$group=="MDD", -1, 1) * ifelse(subjects$Gender=="F", -1, 1),
+##                                               subjects.demeaned[, c("age.in.years", "Full")])
+
+
+two.groups.with.covariates.anova.matrix=cbind("MDD.F"=as.integer(subjects$group=="MDD" & subjects$Gender=='F'),
+                                              "MDD.M"=as.integer(subjects$group=="MDD" & subjects$Gender=='M'),
+                                              "NCL.F"=as.integer(subjects$group=="NCL" & subjects$Gender=='F'),
+                                              "NCL.M"=as.integer(subjects$group=="NCL" & subjects$Gender=='M'),
+                                              "WasiFull"=subjects.demeaned[, "Full"])
+
+anova.x.table.file.name=file.path(vbm.data.dir, "..", "anovaWithDemeanedWasiFull.tab")
+cat("*** Writing", anova.x.table.file.name, "\n")
+write.table(format(two.groups.with.covariates.anova.matrix, digits=3), file=anova.x.table.file.name, quote=FALSE, row.names=FALSE, col.names=FALSE, append=FALSE)
+
 if (exists("tiv")) {
     simple.two.group.mx.with.wasi.and.tbv=makeDesignMatrix(subjects.demeaned, c("MDD", "NCL"), c("Full", "tbv"))
 } else {
